@@ -497,16 +497,18 @@
           <td><span class="big">${loggedMoney(t.mid.payout)}</span></td>
         </tr>`;
       }
+      // Upcoming rows are on top of what's logged, so they read as additions.
+      const p = r.added ? "+" : "";
       return `<tr class="forecast">
         <td><strong>${r.label}</strong><br><span class="small">${r.sub}</span></td>
-        <td><span class="big">${fmtRange(t.low.units, t.high.units)}</span><span class="small">mid ${fmtRough(t.mid.units)}</span></td>
-        <td><span class="big">${Money.range(t.low.net, t.high.net)}</span><span class="small">mid ${Money.rough(t.mid.net)}</span></td>
-        <td><span class="big">${Money.range(t.low.payout, t.high.payout)}</span><span class="small">mid ${Money.rough(t.mid.payout)}</span></td>
+        <td><span class="big">${p}${fmtRange(t.low.units, t.high.units)}</span><span class="small">mid ${p}${fmtRough(t.mid.units)}</span></td>
+        <td><span class="big">${p}${Money.range(t.low.net, t.high.net)}</span><span class="small">mid ${p}${Money.rough(t.mid.net)}</span></td>
+        <td><span class="big">${p}${Money.range(t.low.payout, t.high.payout)}</span><span class="small">mid ${p}${Money.rough(t.mid.payout)}</span></td>
       </tr>`;
     };
     $("#totals").innerHTML =
       group("Running totals", "since launch, logged days included") + running.map(renderRow).join("") +
-      group("Upcoming only", "days after the last logged one, not added to the above") + ahead.map(renderRow).join("");
+      group("Upcoming only", "days after the last logged one, not added to the above") + ahead.map((r) => renderRow({ ...r, added: true })).join("");
   }
 
   function renderNotes(model, mid) {
