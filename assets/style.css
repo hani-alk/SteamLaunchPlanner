@@ -502,6 +502,9 @@ table.totals { width: 100%; border-collapse: collapse; min-width: 560px; }
 .totals .big { font-size: 22px; font-weight: 700; font-stretch: 80%; display: block; line-height: 1.2; white-space: nowrap; }
 .totals .small { color: var(--muted); font-size: 12.5px; }
 .totals tr.forecast .big { color: var(--accent); }
+.totals tr.group th { text-align: left; padding: 16px 16px 6px; color: var(--ink); }
+.totals tr.group:first-child th { padding-top: 6px; }
+.totals tr.group th span { color: var(--faint); font-size: 12.5px; font-stretch: 100%; text-transform: none; letter-spacing: 0; font-weight: 400; margin-left: 6px; }
 
 .grid { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr); gap: 18px; align-items: start; }
 section.block { padding: 18px 20px; }

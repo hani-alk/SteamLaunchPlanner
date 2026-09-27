@@ -466,14 +466,27 @@
   function renderTotals(model, projections) {
     const n = model.n;
     const loggedMoney = model.calibrated ? (v) => Money.exact(v) : (v) => Money.rough(v);
-    const rows = [
-      { label: "Logged so far", sub: `${fmtDate(model.launch)} to ${fmtDate(model.lastDate)}`, from: 0, to: n - 1, rem: false, forecast: false },
-      { label: "Next 7 days", sub: `${fmtDate(addDaysISO(model.lastDate, 1))} to ${fmtDate(addDaysISO(model.lastDate, 7))}`, from: n, to: n + 6, rem: true, forecast: true },
-      { label: "First 30 days", sub: `Through ${fmtDate(addDaysISO(model.launch, 29))}`, from: 0, to: Math.max(29, n - 1), rem: true, forecast: n < 30 },
-      { label: "First year", sub: `Through ${fmtLongDate(addDaysISO(model.launch, 364))}`, from: 0, to: Math.max(364, n - 1), rem: true, forecast: n < 365 },
-      { label: "First three years", sub: `Through ${fmtLongDate(addDaysISO(model.launch, MAX_DAYS - 1))}`, from: 0, to: Math.max(MAX_DAYS - 1, n - 1), rem: true, forecast: n < MAX_DAYS },
+    const launchTo = (i, fmt) => `${fmtDate(model.launch)} to ${fmt(addDaysISO(model.launch, i))}`;
+    const running = [
+      { label: "Logged so far", sub: launchTo(n - 1, fmtDate), from: 0, to: n - 1, rem: false, forecast: false },
+      { label: "First 30 days", sub: launchTo(Math.max(29, n - 1), fmtDate), from: 0, to: Math.max(29, n - 1), rem: true, forecast: n < 30 },
+      { label: "First year", sub: launchTo(Math.max(364, n - 1), fmtLongDate), from: 0, to: Math.max(364, n - 1), rem: true, forecast: n < 365 },
+      { label: "First three years", sub: launchTo(Math.max(MAX_DAYS - 1, n - 1), fmtLongDate), from: 0, to: Math.max(MAX_DAYS - 1, n - 1), rem: true, forecast: n < MAX_DAYS },
     ];
-    $("#totals").innerHTML = rows.map((r) => {
+    const ahead = [
+      { label: "Next 7 days", sub: `${fmtDate(addDaysISO(model.lastDate, 1))} to ${fmtDate(addDaysISO(model.lastDate, 7))}`, from: n, to: n + 6, rem: true, forecast: true },
+    ];
+    // Unlogged days from here to the end of the calendar month we're in.
+    const [ty, tm] = todayISO().split("-").map(Number);
+    const monthEnd = new Date(Date.UTC(ty, tm, 0)).toISOString().slice(0, 10);
+    const monthEndIdx = daysBetween(model.launch, monthEnd);
+    if (monthEndIdx >= n) {
+      const monthName = new Date(monthEnd + "T00:00:00Z").toLocaleString("en-US", { month: "long", timeZone: "UTC" });
+      ahead.push({ label: `To end of ${monthName}`, sub: `${fmtDate(addDaysISO(model.lastDate, 1))} to ${fmtDate(monthEnd)}`, from: n, to: monthEndIdx, rem: true, forecast: true });
+      ahead.sort((a, b) => a.to - b.to);
+    }
+    const group = (title, note) => `<tr class="group"><th colspan="4">${title} <span>${note}</span></th></tr>`;
+    const renderRow = (r) => {
       const t = allCases(projections, r.from, r.to, r.rem);
       if (!r.forecast) {
         const netUnits = model.refundsLogged ? model.totalUnits - model.totalRefunds : model.totalUnits * (1 - model.refundRate);
@@ -490,7 +503,10 @@
         <td><span class="big">${Money.range(t.low.net, t.high.net)}</span><span class="small">mid ${Money.rough(t.mid.net)}</span></td>
         <td><span class="big">${Money.range(t.low.payout, t.high.payout)}</span><span class="small">mid ${Money.rough(t.mid.payout)}</span></td>
       </tr>`;
-    }).join("");
+    };
+    $("#totals").innerHTML =
+      group("Running totals", "since launch, logged days included") + running.map(renderRow).join("") +
+      group("Upcoming only", "days after the last logged one, not added to the above") + ahead.map(renderRow).join("");
   }
 
   function renderNotes(model, mid) {
