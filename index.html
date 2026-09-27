@@ -386,6 +386,19 @@
           <thead><tr><th>Period</th><th>Copies</th><th id="thNet">Steam net</th><th id="thPayout">Your payout</th></tr></thead>
           <tbody id="totals"></tbody>
         </table>
+        <div class="totals-split" id="totalsSplit" hidden>
+          <div class="eyebrow">Where logged sales go</div>
+          <div class="split" id="t-split" role="img">
+            <span class="seg-cut" id="t-seg-cut"></span>
+            <span class="seg-tax" id="t-seg-tax"></span>
+            <span class="seg-take" id="t-seg-take"></span>
+          </div>
+          <div class="legend">
+            <span><i class="sw cut"></i><span id="tl-cut">Steam</span></span>
+            <span><i class="sw tax"></i><span id="tl-tax">Withheld</span></span>
+            <span><i class="sw take"></i><span id="tl-take">You</span></span>
+          </div>
+        </div>
       </div>
 
       <div class="grid">
@@ -491,7 +504,7 @@
 
   <footer class="colophon">
     <!-- bump this on every change that alters the numbers or the inputs -->
-    <span>Steam Sales Estimator <span class="ver" id="ver">v3.3</span> · Sep 2026</span>
+    <span>Steam Sales Estimator <span class="ver" id="ver">v3.4</span> · Sep 2026</span>
     <span class="byline">
       <a href="https://hanialkarrain.com" target="_blank" rel="noopener">Hani</a>
       <span class="sep" aria-hidden="true"></span>

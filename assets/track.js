@@ -438,6 +438,7 @@
       $("#notes").innerHTML = "";
       $("#frameSummary").textContent = "";
       $("#totals").innerHTML = `<tr><td colspan="4" style="color:var(--muted)">Totals appear once you log a day of sales.</td></tr>`;
+      $("#totalsSplit").hidden = true;
       $("#moneyReadout").innerHTML = "";
       $("#wishReadout").innerHTML = "";
       $("#logMsg").textContent = "";
@@ -512,6 +513,24 @@
       ? group("Each month on its own", "not running totals; Steam pays each month about 30 days after it ends") + monthRows(model).map(renderRow).join("")
       : group("Running totals", "since launch, logged days included") + running.map(renderRow).join("") +
         group("Upcoming only", "days after the last logged one, not added to the above") + ahead.map((r) => renderRow({ ...r, added: true })).join("");
+    renderSplit(periodTotals(projections.mid, 0, n - 1, false).net, loggedMoney);
+  }
+
+  // Where logged Steam net goes, the same split the estimator draws before launch.
+  function renderSplit(net, money) {
+    $("#totalsSplit").hidden = !(net > 0);
+    if (!(net > 0)) return;
+    const cut = steamCut(net), take = payoutForCumulative(net), withheld = net - cut - take;
+    const pCut = cut / net * 100, pTax = withheld / net * 100, pTake = take / net * 100;
+    const pct = (p) => Math.round(p) + "%";
+    $("#t-seg-cut").style.flex = `0 0 ${pCut}%`;
+    $("#t-seg-tax").style.flex = `0 0 ${pTax}%`;
+    $("#t-seg-take").style.flex = `0 0 ${pTake}%`;
+    $("#tl-cut").textContent = `Steam ${money(cut)} (${pct(pCut)})`;
+    $("#tl-tax").textContent = `Withheld ${money(withheld)} (${pct(pTax)})`;
+    $("#tl-take").textContent = `You ${money(take)} (${pct(pTake)})`;
+    $("#t-split").setAttribute("aria-label",
+      `Of logged Steam net, Steam takes ${pct(pCut)}, withholding ${pct(pTax)}, you keep ${pct(pTake)}.`);
   }
 
   // Calendar months from launch: the whole first year, and at least six months past today.
