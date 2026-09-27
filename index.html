@@ -3,6 +3,9 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<!-- Only this site's own scripts run, and the only outside request is the exchange-rate lookup. -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data:; connect-src https://open.er-api.com; base-uri 'none'; form-action 'none'" />
+<meta name="referrer" content="no-referrer" />
 <title>Steam Sales Estimator</title>
 <meta name="description" content="Rough ranges for Steam copies sold and take-home revenue: estimated from wishlists before launch, projected from your daily sales after it." />
 <meta name="theme-color" content="#EADDCA" media="(prefers-color-scheme: light)" />
@@ -504,7 +507,7 @@
 
   <footer class="colophon">
     <!-- bump this on every change that alters the numbers or the inputs -->
-    <span>Steam Sales Estimator <span class="ver" id="ver">v3.4</span> · Sep 2026</span>
+    <span>Steam Sales Estimator <span class="ver" id="ver">v3.5</span> · Sep 2026</span>
     <span class="byline">
       <a href="https://hanialkarrain.com" target="_blank" rel="noopener">Hani</a>
       <span class="sep" aria-hidden="true"></span>
@@ -518,6 +521,6 @@
 <script src="assets/common.js"></script>
 <script src="assets/estimate.js"></script>
 <script src="assets/track.js"></script>
-<script>Tabs.boot();</script>
+<script src="assets/boot.js"></script>
 </body>
 </html>

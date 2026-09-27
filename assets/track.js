@@ -57,19 +57,55 @@
   const fmtMonth = (iso) => monthDate.format(new Date(iso + "T00:00:00Z"));
 
   // ── storage ──
+  // Saved games and imported backups are untrusted: a crafted file could put markup where the
+  // page expects a number. Keep only numbers, ISO dates, flags and known choices.
+  const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
+  const cleanNum = (v) => {
+    const n = typeof v === "number" ? v : typeof v === "string" && v.trim() !== "" ? Number(v) : NaN;
+    return Number.isFinite(n) ? n : "";
+  };
+  const cleanDate = (v) => (typeof v === "string" && ISO_DATE.test(v) ? v : "");
+  const isObj = (v) => v != null && typeof v === "object" && !Array.isArray(v);
+  const CHART_CHOICES = {
+    metric: ["units", "net", "payout"], view: ["daily", "cumulative"], scale: ["linear", "log"],
+    preset: FRAME_PRESETS, totals: ["milestones", "months"],
+  };
+
+  // Each field takes the type of its default; strings are dates.
+  function cleanFields(defaults, loaded) {
+    const out = { ...defaults };
+    if (!isObj(loaded)) return out;
+    for (const [k, d] of Object.entries(defaults)) {
+      if (!(k in loaded)) continue;
+      const v = loaded[k];
+      if (typeof d === "boolean") out[k] = typeof v === "boolean" ? v : d;
+      else if (typeof d === "number") out[k] = cleanNum(v);
+      else out[k] = cleanDate(v);
+    }
+    return out;
+  }
+
   function mergeState(loaded) {
     const merged = structuredClone(DEFAULT_STATE);
-    if (!loaded || typeof loaded !== "object") return merged;
-    if (typeof loaded.gameName === "string") merged.gameName = loaded.gameName;
-    if (Array.isArray(loaded.days)) merged.days = loaded.days.filter((d) => d && /^\d{4}-\d{2}-\d{2}$/.test(d.date));
-    if (Array.isArray(loaded.plannedSales)) merged.plannedSales = loaded.plannedSales;
-    Object.assign(merged.settings, loaded.settings || {});
-    Object.assign(merged.reviews, loaded.reviews || {});
-    if (loaded.chartPrefs) {
-      Object.assign(merged.chartPrefs, loaded.chartPrefs);
-      merged.chartPrefs.series = { ...DEFAULT_STATE.chartPrefs.series, ...(loaded.chartPrefs.series || {}) };
-      if (!FRAME_PRESETS.includes(merged.chartPrefs.preset)) merged.chartPrefs.preset = "30";
-      if (!["milestones", "months"].includes(merged.chartPrefs.totals)) merged.chartPrefs.totals = "milestones";
+    if (!isObj(loaded)) return merged;
+    if (typeof loaded.gameName === "string") merged.gameName = loaded.gameName.slice(0, 80);
+    if (Array.isArray(loaded.days)) {
+      merged.days = loaded.days
+        .filter((d) => isObj(d) && ISO_DATE.test(d.date))
+        .map((d) => ({ date: d.date, units: cleanNum(d.units), refunds: cleanNum(d.refunds), netUsd: cleanNum(d.netUsd) }));
+    }
+    if (Array.isArray(loaded.plannedSales)) {
+      merged.plannedSales = loaded.plannedSales
+        .filter(isObj)
+        .map((sale) => ({ start: cleanDate(sale.start), days: cleanNum(sale.days), discountPct: cleanNum(sale.discountPct), boost: cleanNum(sale.boost) }));
+    }
+    merged.settings = cleanFields(DEFAULT_STATE.settings, loaded.settings);
+    merged.reviews = cleanFields(DEFAULT_STATE.reviews, loaded.reviews);
+    if (isObj(loaded.chartPrefs)) {
+      for (const [k, choices] of Object.entries(CHART_CHOICES)) {
+        if (choices.includes(loaded.chartPrefs[k])) merged.chartPrefs[k] = loaded.chartPrefs[k];
+      }
+      merged.chartPrefs.series = cleanFields(DEFAULT_STATE.chartPrefs.series, loaded.chartPrefs.series);
     }
     merged.days.sort((a, b) => a.date.localeCompare(b.date));
     return merged;
@@ -176,11 +212,11 @@
       try { days = (JSON.parse(localStorage.getItem(SAVE_PREFIX + p.id)).days || []).length; } catch { days = 0; }
       const armed = deleteArmedId === p.id;
       return `<li>
-        <button class="project-open" type="button" data-open-project="${p.id}">
+        <button class="project-open" type="button" data-open-project="${escapeHtml(p.id)}">
           <span class="pname">${escapeHtml(p.name)}</span>
           <span class="pmeta">${days} day${days === 1 ? "" : "s"} logged · saved ${stampFormat.format(new Date(p.updatedAt))}</span>
         </button>
-        <button class="btn danger" type="button" data-delete-project="${p.id}">${armed ? "Click again to delete" : "Delete"}</button>
+        <button class="btn danger" type="button" data-delete-project="${escapeHtml(p.id)}">${armed ? "Click again to delete" : "Delete"}</button>
       </li>`;
     }).join("");
   }
