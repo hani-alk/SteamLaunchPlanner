@@ -495,7 +495,7 @@ h2 { font-size: 20px; font-weight: 700; font-stretch: 85%; margin: 0 0 4px; }
 
 .totals-wrap { overflow-x: auto; margin-bottom: 18px; }
 .totals-head { display: flex; justify-content: flex-end; padding: 12px 16px 0; }
-.totals-split { padding: 14px 16px 16px; border-top: 1px solid var(--line); }
+.totals-split { padding: 14px 16px 16px; border-bottom: 1px solid var(--line); }
 .totals-split .split { margin: 10px 0; }
 table.totals { width: 100%; border-collapse: collapse; min-width: 560px; }
 .totals th, .totals td { text-align: right; padding: 12px 16px; border-bottom: 1px solid var(--line); vertical-align: top; }
