@@ -17,6 +17,9 @@
     high: { conv: 1.5, winconv: 1.7, organic: 1.5, tail: 1.4, ref: 0.8 },
   };
 
+  // Share of revenue from US customers, the only part Valve withholds on.
+  const US_DEFAULT = 35;
+
   const YEAR_WEEKS = 52;
   const MAX_WEEKS = 156;
   // Steam's Personal Calendar shows games releasing in the next eight weeks.
@@ -50,6 +53,7 @@
     tail:    { min: 1,    max: 30,     dec: 1 },
     reg:     { min: 0,    max: 90,     dec: 0 },
     ref:     { min: 0,    max: 50,     dec: 1 },
+    us:      { min: 0,    max: 100,    dec: 0 },
   };
   const KEYS = Object.keys(FIELDS);
   const taxSel = $("#s-tax");
@@ -111,6 +115,7 @@
       reg: get("reg") / 100,
       ref: get("ref") / 100,
       tax: parseFloat(taxSel.value) / 100,
+      us: get("us") / 100,
     };
   }
   function shifted(v, c) {
@@ -157,7 +162,8 @@
 
     const at = (units, gross) => {
       const cut = steamCut(gross);
-      const withheld = (gross - cut) * v.tax;
+      // Valve withholds only on US-source income: sales to US customers.
+      const withheld = (gross - cut) * v.us * v.tax;
       return { units, paidUnits: units * paidFor, gross, cut, withheld, take: gross - cut - withheld };
     };
     return {
@@ -342,10 +348,11 @@
   // v3 stores the two wishlist piles and their rates. v2 stored one wishlist
   // count with a late share; v1 stored the wishlist slider position. Both are
   // still read. The currency slots are kept for format stability but ignored:
-  // the viewer's own currency setting wins.
+  // the viewer's own currency setting wins. The US share came later, so it
+  // sits after them.
   const KEY = "kolide.steam-estimator";
   const ORDER = ["price", "held", "win", "conv", "winconv", "organic", "tail", "reg", "ref"];
-  const serialize = () => ["v3", ...ORDER.map(get), taxSel.value, Money.code, Money.rate()].join(",");
+  const serialize = () => ["v3", ...ORDER.map(get), taxSel.value, Money.code, Money.rate(), get("us")].join(",");
   const numOrNull = (s) => { const x = parseFloat(s); return Number.isFinite(x) ? x : null; };
 
   function applyLegacy(p, v1) {
@@ -373,6 +380,7 @@
     p.shift();
     ORDER.forEach((k, i) => { if (numOrNull(p[i]) !== null) setValue(k, numOrNull(p[i])); });
     if (numOrNull(p[9]) !== null) taxSel.value = p[9];
+    if (numOrNull(p[12]) !== null) setValue("us", numOrNull(p[12]));
     return true;
   }
   function save() {
@@ -382,7 +390,7 @@
   // ── presets and price points ──
   function setPreset(name) {
     const p = PRESETS[name] || PRESETS.indie;
-    for (const k of KEYS) setValue(k, p[k]);
+    for (const k of KEYS) if (k in p) setValue(k, p[k]);
     markPreset(name);
     render();
   }
@@ -415,7 +423,7 @@
       "",
       ...ROWS.map(line),
       "",
-      `Take-home in ${Money.code} after refunds, Steam's cut and ${fmtPct(v.tax, 0)} withholding. ` +
+      `Take-home in ${Money.code} after refunds, Steam's cut and ${fmtPct(v.tax, 0)} withholding on the ${fmtPct(v.us, 0)} of sales from the US. ` +
         "Ranges, not predictions: results can land outside them.",
       `Steam Sales Estimator ${$("#ver").textContent} · kolidestudio.com`,
     ];
@@ -431,6 +439,7 @@
   $("#btn-reset").addEventListener("click", () => {
     try { localStorage.removeItem(KEY); } catch { /* private mode */ }
     taxSel.value = "30";
+    setValue("us", US_DEFAULT);
     setPreset("indie");
   });
 
@@ -445,7 +454,7 @@
   if (!booted) {
     try { const stored = localStorage.getItem(KEY); if (stored) booted = apply(stored); } catch { /* private mode */ }
   }
-  if (!booted) { for (const k of KEYS) setValue(k, PRESETS.indie[k]); preset = "indie"; }
+  if (!booted) { for (const k of KEYS) if (k in PRESETS.indie) setValue(k, PRESETS.indie[k]); preset = "indie"; }
   markPreset(preset);
 
   Views.estimate = {

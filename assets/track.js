@@ -17,7 +17,7 @@
     days: [],
     settings: {
       price: 9.99, launchDiscountPct: 10, launchDiscountEnds: "", taxRegionalPct: 20,
-      refundFallbackPct: 10, withholdingPct: 30, wishlists: 0, tailPct: 1.5,
+      refundFallbackPct: 10, withholdingPct: 30, usSharePct: 35, wishlists: 0, tailPct: 1.5,
       lastDayPartial: false, lastDayHours: 12,
     },
     reviews: { positive: 0, negative: 0 },
@@ -203,7 +203,8 @@
     if (sale) return base * (1 - num(sale.discountPct) / 100);
     return date <= launchDiscountEnd(launch) ? base * (1 - num(state.settings.launchDiscountPct) / 100) : base;
   }
-  const keepShare = () => 1 - num(state.settings.withholdingPct) / 100;
+  // Valve withholds only on US-source income: sales to US customers.
+  const keepShare = () => 1 - num(state.settings.withholdingPct) / 100 * clamp(num(state.settings.usSharePct, 35), 0, 100) / 100;
   // Per-copy shortcut for charts and CSV; totals use the tiered cut below.
   const payoutShare = () => 0.7 * keepShare();
   const payoutForCumulative = (net) => (net - steamCut(net)) * keepShare();

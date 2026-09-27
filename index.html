@@ -160,6 +160,13 @@
               <option value="0">0% · US company or person (W-9)</option>
             </select>
           </div>
+
+          <div class="field">
+            <label for="i-us">US share of sales</label>
+            <div class="num"><input type="number" id="i-us" min="0" max="100" step="1" value="35" inputmode="numeric" /><span class="suf">%</span></div>
+            <input type="range" id="s-us" min="0" max="100" step="1" value="35" aria-label="US share of sales slider" />
+            <div class="tip">Withholding applies only to sales to US customers. Often around a third for an English-language game; Steamworks shows yours by region after launch.</div>
+          </div>
         </fieldset>
       </form>
 
@@ -255,7 +262,9 @@
         <li><b>Steam's cut</b>
           <code>30% to $10M · 25% to $50M · 20% above</code></li>
         <li><b>Take-home</b>
-          <code>(gross − Steam's cut) × (1 − withholding)</code></li>
+          <code>(gross − Steam's cut) × (1 − withholding × US share of sales)</code>
+          <span>Valve withholds US tax only on US-source income, meaning sales to customers
+                in the US.</span></li>
       </ol>
 
       <h3>Low and high cases</h3>
@@ -283,8 +292,8 @@
         <dt>This is revenue, not profit</dt>
         <dd>Steam Direct, ports, marketing and your own costs aren't included.</dd>
         <dt>Withholding follows your W-8BEN</dt>
-        <dd>Treaty rates vary; the list is a shortcut, not tax advice. US developers file
-            a W-9 and see none.</dd>
+        <dd>Treaty rates vary; the list is a shortcut, not tax advice. It applies only to
+            your US sales. US developers file a W-9 and see none.</dd>
         <dt>Payment lags a month</dt>
         <dd>Valve pays each month's earnings around the 30th of the next month, once
             you're over $100.</dd>
@@ -406,7 +415,8 @@
               <div class="f"><label for="f-lde">Launch discount ends</label><input id="f-lde" type="date" data-bind="settings.launchDiscountEnds" /><span class="hint">Blank means 7 days after launch</span></div>
               <div class="f"><label for="f-tax">VAT and regional pricing (%)</label><input id="f-tax" type="number" min="0" max="80" step="1" data-bind="settings.taxRegionalPct" /><span class="hint">Share of list price lost to both</span></div>
               <div class="f"><label for="f-ref">Refund rate (%)</label><input id="f-ref" type="number" min="0" max="100" step="0.1" data-bind="settings.refundFallbackPct" /><span class="hint" id="refHint">Used until you log refunds</span></div>
-              <div class="f"><label for="f-wh">Withholding (%)</label><input id="f-wh" type="number" min="0" max="50" step="1" data-bind="settings.withholdingPct" /><span class="hint">From your Steamworks tax interview</span></div>
+              <div class="f"><label for="f-wh">US withholding (%)</label><input id="f-wh" type="number" min="0" max="50" step="1" data-bind="settings.withholdingPct" /><span class="hint">From your Steamworks tax interview</span></div>
+              <div class="f"><label for="f-us">US share of sales (%)</label><input id="f-us" type="number" min="0" max="100" step="1" data-bind="settings.usSharePct" /><span class="hint">Withholding applies to this part only</span></div>
             </div>
             <div class="readout" id="moneyReadout"></div>
           </section>
@@ -465,7 +475,7 @@
         <p><b>Money.</b> Steam net per copy comes from your Steamworks figures when you
            enter them, otherwise from price, launch and planned discounts, VAT and regional
            pricing, and refunds. Payout applies Steam's tiered cut (30% to $10M, 25% to
-           $50M, 20% above) and your withholding.</p>
+           $50M, 20% above), then your withholding rate on the US share of sales.</p>
         <p><b>Discounts.</b> Each planned discount multiplies the middle, low and high
            cases by its boost for its length. Boost is a guess; adjust it once you've run
            a sale.</p>
@@ -475,7 +485,7 @@
 
   <footer class="colophon">
     <!-- bump this on every change that alters the numbers or the inputs -->
-    <span>Steam Sales Estimator <span class="ver" id="ver">v3.0</span> · Sep 2026</span>
+    <span>Steam Sales Estimator <span class="ver" id="ver">v3.1</span> · Sep 2026</span>
     <span class="byline">
       <a href="https://hanialkarrain.com" target="_blank" rel="noopener">Hani</a>
       <span class="sep" aria-hidden="true"></span>
