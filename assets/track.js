@@ -23,7 +23,7 @@
     reviews: { positive: 0, negative: 0 },
     plannedSales: [],
     chartPrefs: {
-      metric: "units", view: "daily", scale: "linear", preset: "30",
+      metric: "units", view: "daily", scale: "linear", preset: "30", totals: "milestones",
       series: { actual: true, forecast: true, range: true, average: false, periods: true, now: true },
     },
   };
@@ -69,6 +69,7 @@
       Object.assign(merged.chartPrefs, loaded.chartPrefs);
       merged.chartPrefs.series = { ...DEFAULT_STATE.chartPrefs.series, ...(loaded.chartPrefs.series || {}) };
       if (!FRAME_PRESETS.includes(merged.chartPrefs.preset)) merged.chartPrefs.preset = "30";
+      if (!["milestones", "months"].includes(merged.chartPrefs.totals)) merged.chartPrefs.totals = "milestones";
     }
     merged.days.sort((a, b) => a.date.localeCompare(b.date));
     return merged;
@@ -374,7 +375,7 @@
     }
   }
 
-  const SEGMENTS = { metricSeg: "metric", viewSeg: "view", scaleSeg: "scale", presetSeg: "preset" };
+  const SEGMENTS = { metricSeg: "metric", viewSeg: "view", scaleSeg: "scale", presetSeg: "preset", totalsSeg: "totals" };
   function renderSegments() {
     for (const [id, key] of Object.entries(SEGMENTS)) {
       for (const b of $$(`#${id} button`)) {
@@ -489,7 +490,8 @@
     const renderRow = (r) => {
       const t = allCases(projections, r.from, r.to, r.rem);
       if (!r.forecast) {
-        const netUnits = model.refundsLogged ? model.totalUnits - model.totalRefunds : model.totalUnits * (1 - model.refundRate);
+        const units = sum(model.actual.slice(r.from, r.to + 1));
+        const netUnits = model.refundsLogged ? units - sum(model.refunds.slice(r.from, r.to + 1)) : units * (1 - model.refundRate);
         return `<tr>
           <td><strong>${r.label}</strong><br><span class="small">${r.sub}</span></td>
           <td><span class="big">${fmtInt(t.mid.units)}</span><span class="small">${fmtInt(netUnits)} after refunds</span></td>
@@ -506,9 +508,39 @@
         <td><span class="big">${p}${Money.range(t.low.payout, t.high.payout)}</span><span class="small">mid ${p}${Money.rough(t.mid.payout)}</span></td>
       </tr>`;
     };
-    $("#totals").innerHTML =
-      group("Running totals", "since launch, logged days included") + running.map(renderRow).join("") +
-      group("Upcoming only", "days after the last logged one, not added to the above") + ahead.map((r) => renderRow({ ...r, added: true })).join("");
+    $("#totals").innerHTML = state.chartPrefs.totals === "months"
+      ? group("Each month on its own", "not running totals; Steam pays each month about 30 days after it ends") + monthRows(model).map(renderRow).join("")
+      : group("Running totals", "since launch, logged days included") + running.map(renderRow).join("") +
+        group("Upcoming only", "days after the last logged one, not added to the above") + ahead.map((r) => renderRow({ ...r, added: true })).join("");
+  }
+
+  // Calendar months from launch: the whole first year, and at least six months past today.
+  function monthRows(model) {
+    const n = model.n;
+    const lastIdx = Math.max(MAX_DAYS, n) - 1;
+    const today = todayISO();
+    const stop = [addDaysISO(model.launch, 364), addDaysISO(model.lastDate > today ? model.lastDate : today, 183)].sort()[1];
+    const rows = [];
+    let [y, m] = model.launch.split("-").map(Number);
+    for (;;) {
+      const start = new Date(Date.UTC(y, m - 1, 1)).toISOString().slice(0, 10);
+      const end = new Date(Date.UTC(y, m, 0)).toISOString().slice(0, 10);
+      const to = daysBetween(model.launch, end);
+      if (start > stop || to > lastIdx) break;
+      const from = Math.max(0, daysBetween(model.launch, start));
+      const holdsLastDay = from <= n - 1 && n - 1 <= to;
+      const forecast = to > n - 1 || (to === n - 1 && !!state.settings.lastDayPartial);
+      const monthName = new Date(start + "T00:00:00Z").toLocaleString("en-US", { month: "long", timeZone: "UTC" });
+      // Valve pays around the 30th of the following month (the 28th or 29th in February).
+      const payday = new Date(Date.UTC(y, m, Math.min(30, new Date(Date.UTC(y, m + 1, 0)).getUTCDate()))).toISOString().slice(0, 10);
+      const notes = [];
+      if (from === 0 && start !== model.launch) notes.push(`From ${fmtDate(model.launch)}`);
+      if (forecast && holdsLastDay) notes.push(`${n - from} of ${to - from + 1} days logged`);
+      notes.push(`Paid around ${fmtDate(payday)}`);
+      rows.push({ label: `${monthName} ${y}`, sub: notes.join(" · "), from, to, rem: forecast && holdsLastDay, forecast });
+      if (++m > 12) { m = 1; y++; }
+    }
+    return rows;
   }
 
   function renderNotes(model, mid) {

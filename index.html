@@ -376,6 +376,12 @@
       </section>
 
       <div class="panel totals-wrap">
+        <div class="totals-head">
+          <div class="seg" id="totalsSeg" role="group" aria-label="Totals by">
+            <button type="button" data-value="milestones">Milestones</button>
+            <button type="button" data-value="months">Month by month</button>
+          </div>
+        </div>
         <table class="totals">
           <thead><tr><th>Period</th><th>Copies</th><th id="thNet">Steam net</th><th id="thPayout">Your payout</th></tr></thead>
           <tbody id="totals"></tbody>
@@ -485,7 +491,7 @@
 
   <footer class="colophon">
     <!-- bump this on every change that alters the numbers or the inputs -->
-    <span>Steam Sales Estimator <span class="ver" id="ver">v3.2</span> · Sep 2026</span>
+    <span>Steam Sales Estimator <span class="ver" id="ver">v3.3</span> · Sep 2026</span>
     <span class="byline">
       <a href="https://hanialkarrain.com" target="_blank" rel="noopener">Hani</a>
       <span class="sep" aria-hidden="true"></span>
