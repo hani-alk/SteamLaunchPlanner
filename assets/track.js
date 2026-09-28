@@ -505,11 +505,16 @@
     const n = model.n;
     const loggedMoney = model.calibrated ? (v) => Money.exact(v) : (v) => Money.rough(v);
     const launchTo = (i, fmt) => `${fmtDate(model.launch)} to ${fmt(addDaysISO(model.launch, i))}`;
+    // A span still has forecast in it if it runs past the log, or ends on a day that's in progress.
+    const spanRow = (label, from, to, fmt) => {
+      const forecast = to > n - 1 || (to === n - 1 && !!state.settings.lastDayPartial);
+      return { label, sub: launchTo(to, fmt), from, to, rem: forecast && to >= n - 1, forecast };
+    };
     const running = [
       { label: "Logged so far", sub: launchTo(n - 1, fmtDate), from: 0, to: n - 1, rem: false, forecast: false },
-      { label: "First 30 days", sub: launchTo(Math.max(29, n - 1), fmtDate), from: 0, to: Math.max(29, n - 1), rem: true, forecast: n < 30 },
-      { label: "First year", sub: launchTo(Math.max(364, n - 1), fmtLongDate), from: 0, to: Math.max(364, n - 1), rem: true, forecast: n < 365 },
-      { label: "First three years", sub: launchTo(Math.max(MAX_DAYS - 1, n - 1), fmtLongDate), from: 0, to: Math.max(MAX_DAYS - 1, n - 1), rem: true, forecast: n < MAX_DAYS },
+      spanRow("First 30 days", 0, 29, fmtDate),
+      spanRow("First year", 0, 364, fmtLongDate),
+      spanRow("First three years", 0, MAX_DAYS - 1, fmtLongDate),
     ];
     const ahead = [
       { label: "Next 7 days", sub: `${fmtDate(addDaysISO(model.lastDate, 1))} to ${fmtDate(addDaysISO(model.lastDate, 7))}`, from: n, to: n + 6, rem: true, forecast: true },
@@ -623,8 +628,10 @@
     const wl = num(state.settings.wishlists);
     if (wl <= 0) { $("#wishReadout").innerHTML = `<p class="help" style="margin:0">Enter your launch wishlists to compare them with sales.</p>`; return; }
     const pct = (v) => fmtPct(v, 0);
-    const week = allCases(projections, 0, Math.max(6, model.n - 1), true);
-    const weekText = model.n >= 7
+    // Days 0 to 6 only; forecast fills in whatever the log hasn't reached yet.
+    const weekOpen = model.n < 7 || (model.n === 7 && !!state.settings.lastDayPartial);
+    const week = allCases(projections, 0, 6, model.n <= 7);
+    const weekText = !weekOpen
       ? `First week: <strong>${pct(week.mid.units / wl)}</strong>.`
       : `First week on the forecast: <strong>${fmtRange(week.low.units / wl, week.high.units / wl, pct)}</strong>.`;
     $("#wishReadout").innerHTML = `
@@ -764,18 +771,11 @@
       ctx.beginPath();
       ctx.rect(area.left, area.top, area.right - area.left, area.bottom - area.top);
       ctx.clip();
-      ctx.font = '12px "Archivo", sans-serif';
       for (const p of o.periods) {
         const left = x.getPixelForValue(p.from) - step / 2;
         const right = x.getPixelForValue(p.to) + step / 2;
         ctx.fillStyle = o.periodFill;
         ctx.fillRect(left, area.top, right - left, area.bottom - area.top);
-        // Label only the periods wide enough to hold one.
-        const lx = Math.max(left, area.left) + 5;
-        if (Math.min(right, area.right) - lx > ctx.measureText(p.label).width + 5) {
-          ctx.fillStyle = o.periodText;
-          ctx.fillText(p.label, lx, area.top + 14);
-        }
       }
       if (o.nowIndex != null) {
         const px = x.getPixelForValue(o.nowIndex) + (o.nowOffset ? step / 2 : 0);
@@ -786,8 +786,41 @@
         ctx.moveTo(px, area.top);
         ctx.lineTo(px, area.bottom);
         ctx.stroke();
-        ctx.fillStyle = o.nowColor;
-        ctx.fillText("Last logged", px + 5, area.bottom - 6);
+      }
+      ctx.restore();
+    },
+    // Labels go on top of the data, on a backing, so tall bars can't cover them.
+    afterDatasetsDraw(c) {
+      const o = c.options.plugins.frameOverlays;
+      if (!o) return;
+      const { ctx, chartArea: area, scales: { x } } = c;
+      const step = c.data.labels.length > 1 ? x.getPixelForValue(1) - x.getPixelForValue(0) : area.right - area.left;
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(area.left, area.top, area.right - area.left, area.bottom - area.top);
+      ctx.clip();
+      ctx.font = '12px "Archivo", sans-serif';
+      const label = (text, lx, y, color) => {
+        const w = ctx.measureText(text).width;
+        ctx.fillStyle = o.labelBg;
+        ctx.fillRect(lx - 3, y - 11, w + 6, 15);
+        ctx.fillStyle = color;
+        ctx.fillText(text, lx, y);
+      };
+      for (const p of o.periods) {
+        const left = x.getPixelForValue(p.from) - step / 2;
+        const right = x.getPixelForValue(p.to) + step / 2;
+        // Label only the periods wide enough to hold one.
+        const lx = Math.max(left, area.left) + 5;
+        if (Math.min(right, area.right) - lx > ctx.measureText(p.label).width + 5) label(p.label, lx, area.top + 14, o.periodText);
+      }
+      if (o.nowIndex != null) {
+        const px = x.getPixelForValue(o.nowIndex) + (o.nowOffset ? step / 2 : 0);
+        const text = "Last logged";
+        const w = ctx.measureText(text).width;
+        // Right of the line when there's room; otherwise to its left, up top, clear of the last bar.
+        if (px + 5 + w <= area.right) label(text, px + 5, area.bottom - 6, o.nowColor);
+        else label(text, px - 5 - w, area.top + 32, o.nowColor);
       }
       ctx.restore();
     },
@@ -888,6 +921,7 @@
             nowIndex: nowInFrame ? model.n - 1 - frame.start : null,
             nowOffset: !cumulative,
             nowColor: ink,
+            labelBg: withAlpha(cssVar("--surface"), 0.85),
           },
         },
         scales: {
