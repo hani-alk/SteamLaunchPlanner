@@ -491,6 +491,45 @@ h2 { font-size: 20px; font-weight: 700; font-stretch: 85%; margin: 0 0 4px; }
 .empty { position: absolute; inset: 0; display: grid; place-items: center; text-align: center; color: var(--muted); padding: 20px; }
 .hero .legend { margin-top: 10px; }
 .frame-summary { margin: 8px 0 0; font-size: 14px; }
+
+/* small dropdowns: a <details> whose menu floats over the page */
+.dropdown { position: relative; }
+.dropdown > summary {
+  list-style: none;
+  cursor: pointer;
+  border: 1px solid var(--line);
+  padding: 6px 11px;
+  color: var(--muted);
+  font-size: 13.5px;
+  user-select: none;
+}
+.dropdown > summary::-webkit-details-marker { display: none; }
+.dropdown > summary::after { content: "▾"; margin-left: 6px; color: var(--faint); }
+.dropdown > summary:hover, .dropdown[open] > summary { color: var(--ink); }
+.dropdown .menu {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 6px);
+  z-index: 20;
+  display: grid;
+  gap: 8px;
+  width: max-content;
+  max-width: min(300px, calc(100vw - 32px));
+  padding: 12px 14px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.28);
+}
+.menu-label { font-size: 11.5px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--faint); }
+.menu-label + .seg { justify-self: start; }
+.menu-list { flex-direction: column; gap: 7px; }
+.menu-hint { margin: 4px 0 0; }
+.mini-notes { margin-top: 6px; }
+.mini-notes > summary { cursor: pointer; list-style: none; color: var(--faint); font-size: 13px; width: max-content; }
+.mini-notes > summary::-webkit-details-marker { display: none; }
+.mini-notes > summary::after { content: " ▾"; }
+.mini-notes[open] > summary::after { content: " ▴"; }
+.mini-notes > summary:hover { color: var(--ink); }
 .track-notes { margin: 6px 0 0; color: var(--muted); font-size: 13px; }
 .track-notes p { margin: 2px 0; }
 

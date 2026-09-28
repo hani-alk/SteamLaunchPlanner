@@ -445,6 +445,14 @@
       el.checked = !!state.chartPrefs.series[el.dataset.series];
       if (el.dataset.series === "average") el.disabled = state.chartPrefs.view === "cumulative";
     }
+    renderLegend();
+  }
+  // The legend lists only what's on the chart; the Chart menu turns things on and off.
+  function renderLegend() {
+    $("#shownLegend").innerHTML = $$("[data-series]")
+      .filter((el) => el.checked && !el.disabled)
+      .map((el) => `<span>${el.nextElementSibling.outerHTML}${escapeHtml(el.parentElement.textContent.trim())}</span>`)
+      .join("");
   }
 
   function renderLog() {
@@ -1115,6 +1123,7 @@
       onChange();
     } else if (el.dataset.series) {
       state.chartPrefs.series[el.dataset.series] = el.checked;
+      renderLegend();
       onChange();
     } else if (el.dataset.day != null && el.dataset.field !== "date") {
       state.days[+el.dataset.day][el.dataset.field] = el.value === "" ? "" : parseFloat(el.value);
@@ -1165,6 +1174,15 @@
     });
   }
   $("#resetFrame").addEventListener("click", () => { customFrame = null; recompute(); });
+
+  // Dropdowns close on a click outside them or on Escape.
+  document.addEventListener("click", (e) => {
+    for (const d of $$("details.dropdown[open]")) if (!d.contains(e.target)) d.open = false;
+  });
+  document.addEventListener("keydown", (e) => {
+    if (e.key !== "Escape") return;
+    for (const d of $$("details.dropdown[open]")) { d.open = false; d.querySelector("summary").focus(); }
+  });
 
   for (const tab of $$(".sec-tab")) {
     tab.addEventListener("click", () => openPanel(tab.dataset.panel));

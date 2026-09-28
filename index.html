@@ -12,7 +12,7 @@
 <meta name="theme-color" content="#111111" media="(prefers-color-scheme: dark)" />
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%23111111'/%3E%3Crect x='7' y='7' width='18' height='18' fill='%23C7352A'/%3E%3C/svg%3E" />
 <link rel="preload" href="assets/archivo.woff2" as="font" type="font/woff2" crossorigin />
-<link rel="stylesheet" href="assets/style.css?v=3.10" />
+<link rel="stylesheet" href="assets/style.css?v=3.11" />
 
 <meta property="og:type" content="website" />
 <meta property="og:title" content="Steam Sales Estimator" />
@@ -344,10 +344,6 @@
             <button type="button" data-value="daily">Daily</button>
             <button type="button" data-value="cumulative">Cumulative</button>
           </div>
-          <div class="seg" id="scaleSeg" role="group" aria-label="Vertical scale">
-            <button type="button" data-value="linear">Linear</button>
-            <button type="button" data-value="log">Log</button>
-          </div>
           <span class="spacer"></span>
           <div class="seg" id="presetSeg" role="group" aria-label="Time span">
             <button type="button" data-value="logged">Logged</button>
@@ -356,6 +352,26 @@
             <button type="button" data-value="1095">3 years</button>
           </div>
           <button class="btn-quiet" type="button" id="resetFrame" hidden>Reset zoom</button>
+          <details class="dropdown" id="chartMenu">
+            <summary>Chart</summary>
+            <div class="menu">
+              <div class="menu-label">Scale</div>
+              <div class="seg" id="scaleSeg" role="group" aria-label="Vertical scale">
+                <button type="button" data-value="linear">Linear</button>
+                <button type="button" data-value="log">Log</button>
+              </div>
+              <div class="menu-label">Show</div>
+              <div class="legend menu-list" id="toggles">
+                <label><input type="checkbox" data-series="actual" /><span class="sw actual"></span>Logged</label>
+                <label><input type="checkbox" data-series="forecast" /><span class="sw dash"></span>Middle case</label>
+                <label><input type="checkbox" data-series="range" /><span class="sw range"></span>Low to high</label>
+                <label><input type="checkbox" data-series="average" /><span class="sw avg"></span>7-day average</label>
+                <label><input type="checkbox" data-series="periods" /><span class="sw periods"></span>Discounts</label>
+                <label><input type="checkbox" data-series="now" /><span class="sw now"></span>Last logged day</label>
+              </div>
+              <p class="hint menu-hint">Drag across the chart to zoom in. Double-click to reset. Ctrl or ⌘ + scroll zooms around the cursor.</p>
+            </div>
+          </details>
         </div>
 
         <div class="chart-box track-chart" id="chartBox">
@@ -364,17 +380,12 @@
           <div class="empty" id="chartEmpty">Add your first day of sales below, or import a Steamworks CSV.</div>
         </div>
 
-        <div class="legend" id="toggles">
-          <label><input type="checkbox" data-series="actual" /><span class="sw actual"></span>Logged</label>
-          <label><input type="checkbox" data-series="forecast" /><span class="sw dash"></span>Middle case</label>
-          <label><input type="checkbox" data-series="range" /><span class="sw range"></span>Low to high</label>
-          <label><input type="checkbox" data-series="average" /><span class="sw avg"></span>7-day average</label>
-          <label><input type="checkbox" data-series="periods" /><span class="sw periods"></span>Discounts</label>
-          <label><input type="checkbox" data-series="now" /><span class="sw now"></span>Last logged day</label>
-        </div>
+        <div class="legend" id="shownLegend"></div>
         <p class="frame-summary" id="frameSummary"></p>
-        <p class="hint" style="margin:2px 0 0">Drag across the chart to zoom in. Double-click to reset. Ctrl or ⌘ + scroll zooms around the cursor.</p>
-        <div class="track-notes" id="notes"></div>
+        <details class="mini-notes">
+          <summary>Forecast notes</summary>
+          <div class="track-notes" id="notes"></div>
+        </details>
       </section>
 
       <!-- Everything below the chart, one tab at a time. -->
@@ -509,7 +520,7 @@
 
   <footer class="colophon">
     <!-- bump this on every change that alters the numbers or the inputs, and the ?v= on the asset links in the head and at the end so browsers fetch the new files -->
-    <span>Steam Sales Estimator <span class="ver" id="ver">v3.10</span> · Sep 2026</span>
+    <span>Steam Sales Estimator <span class="ver" id="ver">v3.11</span> · Sep 2026</span>
     <span class="byline">
       <a href="https://hanialkarrain.com" target="_blank" rel="noopener">Hani</a>
       <span class="sep" aria-hidden="true"></span>
@@ -519,10 +530,10 @@
 
 </div>
 
-<script src="assets/chart.umd.min.js?v=3.10"></script>
-<script src="assets/common.js?v=3.10"></script>
-<script src="assets/estimate.js?v=3.10"></script>
-<script src="assets/track.js?v=3.10"></script>
-<script src="assets/boot.js?v=3.10"></script>
+<script src="assets/chart.umd.min.js?v=3.11"></script>
+<script src="assets/common.js?v=3.11"></script>
+<script src="assets/estimate.js?v=3.11"></script>
+<script src="assets/track.js?v=3.11"></script>
+<script src="assets/boot.js?v=3.11"></script>
 </body>
 </html>
