@@ -1,6 +1,7 @@
 /* Pay yourself: back pay for the months worked unpaid and a salary from now
-   on, drawn from the cash already in hand. Standalone: it doesn't read
-   wishlists, sales or forecasts from the other views. */
+   on, drawn from the cash already in hand, after setting shares of it aside.
+   Cash on hand can start from the payout logged in After launch; nothing else
+   is read from the other views. */
 (() => {
   "use strict";
 
@@ -23,8 +24,14 @@
   const MONEY_KEYS = KEYS.filter((k) => FIELDS[k].money);
   for (const k of KEYS) FIELDS[k].num = $("#p-" + k);
 
-  // Last valid value per field, plus the currency and rate they're in.
-  const state = { code: Money.code, rate: Money.rate() };
+  // Last valid value per field, plus the currency and rate they're in, where
+  // cash on hand comes from ("" when typed) and the savings rows.
+  const state = { code: Money.code, rate: Money.rate(), source: "", savings: [] };
+  const MAX_SAVINGS = 12;
+  const cleanSaving = (label, pct) => ({
+    label: String(label ?? "").slice(0, 40),
+    pct: Math.round(clamp(num(pct), 0, 100) * 10) / 10,
+  });
 
   const setValue = (k, x, { keepText = false } = {}) => {
     x = Math.round(clamp(x, FIELDS[k].min, FIELDS[k].max));
@@ -36,6 +43,9 @@
     state.rate = Money.rate();
     for (const k of MONEY_KEYS) setValue(k, roundSig(DEFAULTS_USD[k] * state.rate));
     for (const [k, x] of Object.entries(DEFAULTS)) setValue(k, x);
+    state.source = "";
+    state.savings = [];
+    renderSavings();
   }
 
   // Follow the page's currency: convert on a switch, just note the rate otherwise.
@@ -66,6 +76,89 @@
   }
   $("#pay-controls").addEventListener("submit", (e) => e.preventDefault());
 
+  // ── starting from the payout logged in After launch ──
+  // Worked out when the view opens rather than on every keystroke.
+  const sourceSel = $("#p-source");
+  const ALL = "all";
+  let payouts = [];
+  function refreshPayouts() {
+    payouts = Views.track && Views.track.payouts ? Views.track.payouts() : [];
+  }
+  function sourcePayout() {
+    if (!state.source) return null;
+    const games = state.source === ALL ? payouts : payouts.filter((g) => g.id === state.source);
+    return games.length ? { usd: sum(games.map((g) => g.payoutUsd)), games } : null;
+  }
+  function paintSource() {
+    // A game that's been deleted, or has nothing logged any more, falls back to typing.
+    if (state.source && !sourcePayout()) state.source = "";
+    const opt = (value, text) => `<option value="${escapeHtml(value)}">${escapeHtml(text)}</option>`;
+    const games = payouts.map((g) => opt(g.id, `Payout from ${g.name} · ${Money.local(g.payoutUsd * Money.rate())}`));
+    if (payouts.length > 1) games.push(opt(ALL, `Payout from all games · ${Money.local(sum(payouts.map((g) => g.payoutUsd)) * Money.rate())}`));
+    sourceSel.innerHTML = opt("", "An amount I type") +
+      (games.length ? games.join("") : "<option disabled>No sales logged in After launch yet</option>");
+    sourceSel.value = state.source;
+
+    const linked = sourcePayout();
+    FIELDS.cash.num.readOnly = !!linked;
+    FIELDS.cash.num.closest(".num").classList.toggle("linked", !!linked);
+    if (linked) {
+      setValue("cash", linked.usd * Money.rate());
+      const names = linked.games.length > 1 ? `${linked.games.length} games` : linked.games[0].name;
+      $("#p-cash-tip").textContent = `Your payout on the days logged for ${names}, after Steam's cut and US withholding. Set tax aside below.`;
+    } else {
+      $("#p-cash-tip").textContent = "After setting money aside for tax, or set tax aside below.";
+    }
+  }
+  sourceSel.addEventListener("change", () => {
+    state.source = sourceSel.value;
+    render();
+  });
+
+  // ── savings rows: a label and a share of cash on hand ──
+  const savingsBox = $("#p-savings");
+  function renderSavings() {
+    savingsBox.innerHTML = state.savings.map((sv, i) => `
+      <div class="saving">
+        <input class="saving-name" type="text" maxlength="40" value="${escapeHtml(sv.label)}" placeholder="Label" data-saving="${i}" data-field="label" aria-label="Savings ${i + 1} label" />
+        <div class="num"><input type="number" min="0" max="100" step="0.5" inputmode="decimal" value="${sv.pct}" data-saving="${i}" data-field="pct" aria-label="Savings ${i + 1} percentage" /><span class="suf">%</span></div>
+        <button class="btn-quiet" type="button" data-del-saving="${i}" aria-label="Remove savings ${i + 1}">Remove</button>
+        <div class="tip" data-saving-amount="${i}"></div>
+      </div>`).join("");
+    $("#p-add-saving").hidden = state.savings.length >= MAX_SAVINGS;
+  }
+  savingsBox.addEventListener("input", (e) => {
+    const el = e.target;
+    if (el.dataset.saving == null) return;
+    const sv = state.savings[+el.dataset.saving];
+    if (el.dataset.field === "label") sv.label = el.value.slice(0, 40);
+    else if (Number.isFinite(parseFloat(el.value))) sv.pct = cleanSaving("", el.value).pct;
+    render();
+  });
+  // On blur, a percentage settles into its clean, in-range value.
+  savingsBox.addEventListener("change", (e) => {
+    const el = e.target;
+    if (el.dataset.saving != null && el.dataset.field === "pct") el.value = state.savings[+el.dataset.saving].pct;
+  });
+  savingsBox.addEventListener("click", (e) => {
+    const del = e.target.closest("[data-del-saving]");
+    if (!del) return;
+    state.savings.splice(+del.dataset.delSaving, 1);
+    renderSavings();
+    render();
+    $("#p-add-saving").focus();
+  });
+  // The first row suggests tax; later ones start blank.
+  $("#p-add-saving").addEventListener("click", () => {
+    if (state.savings.length >= MAX_SAVINGS) return;
+    const first = !state.savings.length;
+    state.savings.push(cleanSaving(first ? "Tax" : "", first ? 25 : 10));
+    renderSavings();
+    render();
+    const names = savingsBox.querySelectorAll(".saving-name");
+    names[names.length - 1].focus();
+  });
+
   // ── months: month 0 is this calendar month ──
   const today = new Date();
   const monthAt = (offset) => new Date(Date.UTC(today.getFullYear(), today.getMonth() + offset, 1));
@@ -78,19 +171,22 @@
   // ── model ──
   function plan() {
     const s = state;
+    const asideShare = sum(s.savings.map((sv) => sv.pct)) / 100;
+    const aside = s.savings.map((sv) => ({ ...sv, amount: s.cash * sv.pct / 100 }));
+    const pool = s.cash * Math.max(0, 1 - asideShare);
     const owed = s.worked * s.backPer;
     const installment = owed / s.spread;
     const monthly = s.salary + s.costs;
     const months = [];
-    let left = s.cash, runsOut = null;
+    let left = pool, runsOut = null;
     for (let i = 0; i < s.ahead; i++) {
       const backPay = i < s.spread ? installment : 0;
       left -= monthly + backPay;
       months.push({ i, salary: s.salary, backPay, costs: s.costs, left });
       if (left < 0 && runsOut === null) runsOut = i;
     }
-    const covered = monthly > 0 ? Math.max(0, s.cash - owed) / monthly : Infinity;
-    return { owed, installment, monthly, months, runsOut, covered, left };
+    const covered = monthly > 0 ? Math.max(0, pool - owed) / monthly : Infinity;
+    return { aside, asideShare, pool, owed, installment, monthly, months, runsOut, covered, left };
   }
 
   function headline(p) {
@@ -159,7 +255,7 @@
 
     const axes = alignedAxes([
       { lo: -(p.monthly + p.installment), hi: s.worked > 0 ? s.backPer : 0 },
-      { lo: Math.min(0, ...p.months.map((m) => m.left)), hi: Math.max(0, s.cash) },
+      { lo: Math.min(0, ...p.months.map((m) => m.left)), hi: Math.max(0, p.pool) },
     ]);
     const below = (ctx) => ctx.p0.parsed.y < 0 || ctx.p1.parsed.y < 0;
 
@@ -218,10 +314,32 @@
   }
 
   // ── render ──
+  // What the savings rows take out, in a sentence.
+  function asideLine(p) {
+    if (!p.aside.length) return "";
+    if (p.asideShare > 1) return `Savings add up to ${fmtPct(p.asideShare)} of cash on hand, so nothing is left for the plan.`;
+    const names = p.aside.map((a) => a.label.trim()).filter(Boolean);
+    const what = !names.length ? ""
+      : names.length === 1 ? ` for ${names[0]}`
+      : ` for ${names.slice(0, -1).join(", ")} and ${names[names.length - 1]}`;
+    return `${Money.local(sum(p.aside.map((a) => a.amount)))} (${fmtPct(p.asideShare)}) is set aside${what}, ` +
+      `so the plan starts from ${Money.local(p.pool)}.`;
+  }
+
   function render() {
     if ($("#view-pay").hidden) return;
+    paintSource();
     const p = plan();
     const h = headline(p);
+
+    const aside = asideLine(p);
+    $("#pay-aside").hidden = !aside;
+    $("#pay-aside").textContent = aside;
+    $("#pay-aside").classList.toggle("short", p.asideShare > 1);
+    for (const el of $$("[data-saving-amount]")) {
+      const a = p.aside[+el.dataset.savingAmount];
+      el.textContent = a ? `${Money.local(a.amount)} of ${Money.local(state.cash)}` : "";
+    }
 
     $("#pay-owed").textContent = h.owed;
     $("#pay-rest").textContent = h.rest;
@@ -254,12 +372,16 @@
 
   // ── state in the URL hash + localStorage ──
   // Amounts travel with their currency and rate, so a link opened in another
-  // currency converts them rather than reading euros as dollars.
+  // currency converts them rather than reading euros as dollars. v2 adds the
+  // savings rows as label, percentage pairs, labels URI-encoded so commas are
+  // safe. Where cash came from stays in this browser: a link carries the amount.
   const KEY = "pay-yourself";
-  const serialize = () => ["pay", "v1", ...KEYS.map((k) => state[k]), state.code, state.rate].join(",");
+  const SOURCE_KEY = "pay-yourself.source";
+  const serialize = () => ["pay", "v2", ...KEYS.map((k) => state[k]), state.code, state.rate,
+    ...state.savings.flatMap((sv) => [encodeURIComponent(sv.label), sv.pct])].join(",");
   function apply(str) {
     const p = String(str).split(",");
-    if (p[0] !== "pay" || p[1] !== "v1") return false;
+    if (p[0] !== "pay" || (p[1] !== "v1" && p[1] !== "v2")) return false;
     const vals = p.slice(2);
     const code = vals[KEYS.length], rate = parseFloat(vals[KEYS.length + 1]);
     // Same currency: take the amounts as typed, whatever the rate has done since.
@@ -269,19 +391,33 @@
       if (!Number.isFinite(x)) return;
       setValue(k, FIELDS[k].money && convert ? x * Money.rate() / rate : x);
     });
+    const rows = vals.slice(KEYS.length + 2);
+    state.savings = [];
+    for (let i = 0; i + 1 < rows.length && state.savings.length < MAX_SAVINGS; i += 2) {
+      let label = "";
+      try { label = decodeURIComponent(rows[i]); } catch { /* malformed: leave it blank */ }
+      state.savings.push(cleanSaving(label, rows[i + 1]));
+    }
+    renderSavings();
     return true;
   }
   function save() {
-    try { localStorage.setItem(KEY, serialize()); } catch { /* private mode */ }
+    try {
+      localStorage.setItem(KEY, serialize());
+      localStorage.setItem(SOURCE_KEY, state.source);
+    } catch { /* private mode */ }
   }
 
   $("#pay-copy").addEventListener("click", (e) => {
     const p = plan(), h = headline(p), s = state;
     const lines = [
       "Pay yourself",
-      `${Money.local(s.cash)} cash on hand · ${plural(s.worked, "month")} unpaid at ${Money.local(s.backPer)} · ` +
+      `${Money.local(s.cash)} cash on hand${sourcePayout() ? " from logged Steam payout" : ""} · ` +
+        `${plural(s.worked, "month")} unpaid at ${Money.local(s.backPer)} · ` +
         `back pay over ${plural(s.spread, "month")} · ${Money.local(s.salary)} salary and ${Money.local(s.costs)} other costs a month`,
+      ...p.aside.map((a) => `Set aside for ${a.label.trim() || "savings"}: ${fmtPct(a.pct / 100)}, ${Money.local(a.amount)}`),
       "",
+      ...(p.aside.length ? [asideLine(p)] : []),
       `${h.owed} ${h.rest}`,
       "",
       "A cash plan, not tax or financial advice.",
@@ -306,15 +442,23 @@
   onThemeChange(() => { if (chart) { chart.destroy(); chart = null; } render(); });
 
   // ── boot: URL hash wins, then saved state, then the defaults ──
+  // The hash is split before it's decoded, so an encoded comma stays inside its
+  // label. A link some app encoded as a whole is unwrapped once first.
   setDefaults();
-  const hash = decodeURIComponent(location.hash.slice(1));
+  const raw = location.hash.slice(1);
+  const hash = /^pay%2C/i.test(raw) ? decodeURIComponent(raw) : raw;
   if (!(hash.startsWith("pay,") && apply(hash))) {
-    try { const stored = localStorage.getItem(KEY); if (stored) apply(stored); } catch { /* private mode */ }
+    try {
+      const stored = localStorage.getItem(KEY);
+      if (stored) apply(stored);
+      state.source = localStorage.getItem(SOURCE_KEY) || "";
+    } catch { /* private mode */ }
   }
   syncCurrency();
 
   Views.pay = {
     show() {
+      refreshPayouts();
       render();
       if (chart) chart.resize();
     },

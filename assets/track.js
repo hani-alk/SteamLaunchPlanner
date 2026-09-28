@@ -1382,6 +1382,29 @@
   Money.onChange(recompute);
   onThemeChange(recompute);
 
+  // Payout on each game's logged days, in USD, for the Pay yourself view. The
+  // model reads the module's state, so each save is swapped in for a moment.
+  // The open game comes from memory so edits still waiting to save count.
+  function loggedPayouts() {
+    const current = state, out = [];
+    try {
+      for (const entry of saves) {
+        try {
+          state = entry.id === activeId ? current : mergeState(JSON.parse(localStorage.getItem(SAVE_PREFIX + entry.id)));
+          const model = buildModel();
+          if (!model) continue;
+          const payoutUsd = periodTotals(project(model, "mid"), 0, model.n - 1, false).payout;
+          out.push({ id: entry.id, name: state.gameName || entry.name, payoutUsd, lastDate: model.lastDate });
+        } catch (err) {
+          console.error("Could not read a game's payout", entry.id, err);
+        }
+      }
+    } finally {
+      state = current;
+    }
+    return out;
+  }
+
   readIndex();
   renderProjectList();
 
@@ -1390,5 +1413,6 @@
       if (activeId) recompute();
       else renderProjectList();
     },
+    payouts: loggedPayouts,
   };
 })();

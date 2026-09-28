@@ -283,7 +283,7 @@ const Tabs = (() => {
     const h = location.hash.slice(1);
     // "#track" opens the tracker, "#pay…" the pay planner; any other hash is a shared estimate.
     if (h === "track") return open("track", { remember: false });
-    if (h === "pay" || h.startsWith("pay,")) return open("pay", { remember: false });
+    if (/^pay($|,|%2C)/i.test(h)) return open("pay", { remember: false });
     if (h) return open("estimate", { remember: false });
     let saved = null;
     try { saved = localStorage.getItem(KEY); } catch { /* private mode */ }

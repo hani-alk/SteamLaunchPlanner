@@ -12,7 +12,7 @@
 <meta name="theme-color" content="#111111" media="(prefers-color-scheme: dark)" />
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%23111111'/%3E%3Crect x='6' y='18' width='5' height='8' fill='%23EADDCA'/%3E%3Crect x='13.5' y='13' width='5' height='13' fill='%23EADDCA'/%3E%3Crect x='21' y='6' width='5' height='20' fill='%23C7352A'/%3E%3C/svg%3E" />
 <link rel="preload" href="assets/archivo.woff2" as="font" type="font/woff2" crossorigin />
-<link rel="stylesheet" href="assets/style.css?v=3.13" />
+<link rel="stylesheet" href="assets/style.css?v=3.14" />
 
 <meta property="og:type" content="website" />
 <meta property="og:title" content="Steam Launch Planner" />
@@ -531,11 +531,23 @@
 
         <fieldset>
           <legend>What you have</legend>
+          <div class="stack">
+            <label for="p-source">Start from</label>
+            <select id="p-source" class="full"></select>
+          </div>
+
           <div class="field">
             <label for="p-cash">Cash on hand</label>
             <div class="num amount"><input type="number" id="p-cash" min="0" step="1" inputmode="numeric" /><span class="suf cur">USD</span></div>
-            <div class="tip">After setting money aside for tax.</div>
+            <div class="tip" id="p-cash-tip">After setting money aside for tax, or set tax aside below.</div>
           </div>
+        </fieldset>
+
+        <fieldset>
+          <legend>Set aside</legend>
+          <p class="tip savings-help">A share of cash on hand kept out of the plan: tax, an emergency fund, the next game.</p>
+          <div class="savings" id="p-savings"></div>
+          <div><button class="btn" type="button" id="p-add-saving">Add savings</button></div>
         </fieldset>
 
         <fieldset>
@@ -584,6 +596,7 @@
           <span class="eyebrow">Cash plan</span>
         </div>
         <p class="pay-line"><span id="pay-owed"></span> <span id="pay-rest"></span></p>
+        <p class="mid-line" id="pay-aside" hidden></p>
 
         <div class="chart-box pay-chart"><canvas id="pay-chart" role="img"></canvas></div>
         <div class="legend">
@@ -632,9 +645,15 @@
          lasts if you pay yourself back pay and a salary from it. It isn't tax or
          financial advice. How much to set aside for tax should come from an
          accountant; take it out before you enter your cash on hand.</p>
-      <p><b>On its own.</b> Wishlists, sales and forecasts from the other tabs aren't
-         used, and neither are Steam payouts still to come. Only the cash on hand counts.</p>
+      <p><b>What it starts from.</b> Only cash on hand counts: wishlists and forecasts
+         aren't used, and neither are Steam payouts still to come. Starting from your
+         payout uses what After launch shows for the days logged so far, after Steam's
+         cut and US withholding. Valve pays each month about 30 days after it ends, so
+         the latest of it may not have arrived yet.</p>
       <ol class="steps">
+        <li><b>Set aside</b>
+          <code>cash on hand × each savings percentage</code>
+          <span>Kept out of the plan. The rest is what salary, back pay and costs come from.</span></li>
         <li><b>Back pay owed</b>
           <code>months worked unpaid × back pay per month</code></li>
         <li><b>Each back pay payment</b>
@@ -644,7 +663,7 @@
           <code>cash left − salary − other costs − back pay payment</code>
           <span>The first month it goes below zero is when your cash runs out.</span></li>
         <li><b>How long it lasts</b>
-          <code>(cash on hand − back pay owed) ÷ (salary + other costs)</code>
+          <code>(cash for the plan − back pay owed) ÷ (salary + other costs)</code>
           <span>Shown when the cash still lasts past the months ahead.</span></li>
       </ol>
 
@@ -664,16 +683,16 @@
 
   <footer class="colophon">
     <!-- bump this on every change that alters the numbers or the inputs, and the ?v= on the asset links in the head and at the end so browsers fetch the new files -->
-    <span>Steam Launch Planner <span class="ver" id="ver">v3.13</span> · Sep 2026</span>
+    <span>Steam Launch Planner <span class="ver" id="ver">v3.14</span> · Sep 2026</span>
   </footer>
 
 </div>
 
-<script src="assets/chart.umd.min.js?v=3.13"></script>
-<script src="assets/common.js?v=3.13"></script>
-<script src="assets/estimate.js?v=3.13"></script>
-<script src="assets/track.js?v=3.13"></script>
-<script src="assets/pay.js?v=3.13"></script>
-<script src="assets/boot.js?v=3.13"></script>
+<script src="assets/chart.umd.min.js?v=3.14"></script>
+<script src="assets/common.js?v=3.14"></script>
+<script src="assets/estimate.js?v=3.14"></script>
+<script src="assets/track.js?v=3.14"></script>
+<script src="assets/pay.js?v=3.14"></script>
+<script src="assets/boot.js?v=3.14"></script>
 </body>
 </html>
