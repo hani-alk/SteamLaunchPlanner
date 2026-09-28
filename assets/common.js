@@ -1,5 +1,5 @@
-/* Shared by both views: formatting, currency, Steam's revenue share, chart
-   colours and the tab switch. Loaded before estimate.js and track.js. */
+/* Shared by every view: formatting, currency, Steam's revenue share, chart
+   colours and the tab switch. Loaded before the view scripts. */
 "use strict";
 
 const $ = (sel) => document.querySelector(sel);
@@ -85,7 +85,12 @@ const RATES_URL = "https://open.er-api.com/v6/latest/USD";
 const Money = (() => {
   const KEY = "kolide.currency";
   let code = "USD", rates = {}, updated = "";
+  // Most recently used first; the header offers them as one-click buttons.
+  let recent = ["USD", "EUR", "GBP"];
+  // Currencies whose rate was typed by hand, so an automatic refresh leaves them alone.
+  let typed = [];
   const listeners = [];
+  const known = (c) => CURRENCIES.some((x) => x.code === c);
 
   try {
     const saved = JSON.parse(localStorage.getItem(KEY) || "null");
@@ -93,13 +98,15 @@ const Money = (() => {
       code = saved.code;
       rates = saved.rates && typeof saved.rates === "object" ? saved.rates : {};
       updated = saved.updated || "";
+      if (Array.isArray(saved.recent)) recent = [...new Set(saved.recent.filter(known))].slice(0, 4);
+      if (Array.isArray(saved.typed)) typed = saved.typed.filter(known);
     }
   } catch { /* private mode or bad data: stay on USD */ }
 
   const info = (c = code) => CURRENCIES.find((x) => x.code === c) || CURRENCIES[0];
   const rate = () => (code === "USD" ? 1 : num(rates[code], info().rate));
   function save() {
-    try { localStorage.setItem(KEY, JSON.stringify({ code, rates, updated })); } catch { /* private mode */ }
+    try { localStorage.setItem(KEY, JSON.stringify({ code, rates, updated, recent, typed })); } catch { /* private mode */ }
   }
   function changed() { save(); listeners.forEach((fn) => fn()); }
 
@@ -120,17 +127,30 @@ const Money = (() => {
   const exact = (usd, digits = 0) => local(usd * rate(), digits);
   const rough = (usd) => localRough(usd * rate());
   const range = (lo, hi) => fmtRange(lo, hi, rough);
+  // Fetched rates older than a day are worth refreshing when a floating currency is picked.
+  const stale = () => !info().pegged && !typed.includes(code) && !(Date.now() - Date.parse(updated) < 864e5);
 
   return {
     get code() { return code; },
     get updated() { return updated; },
-    info, rate, exact, rough, range, local, localCompact, localRough,
+    get recent() { return recent; },
+    info, rate, exact, rough, range, local, localCompact, localRough, stale,
     onChange(fn) { listeners.push(fn); },
-    setCode(c) { code = info(c).code; changed(); },
-    setRate(r) { if (code !== "USD" && r > 0) { rates[code] = r; changed(); } },
+    setCode(c) {
+      code = info(c).code;
+      recent = [code, ...recent.filter((x) => x !== code)].slice(0, 4);
+      changed();
+    },
+    setRate(r) {
+      if (code === "USD" || !(r > 0)) return;
+      rates[code] = r;
+      if (!typed.includes(code)) typed.push(code);
+      changed();
+    },
     setRates(all, when) {
       for (const c of CURRENCIES) if (Number.isFinite(all[c.code])) rates[c.code] = all[c.code];
       updated = when;
+      typed = [];
       changed();
     },
   };
@@ -138,12 +158,17 @@ const Money = (() => {
 
 // The currency bar in the page header.
 (() => {
-  const sel = $("#cur"), rateIn = $("#rate"), rateWrap = $("#rate-wrap"), status = $("#rates-status");
+  const sel = $("#cur"), rateIn = $("#rate"), rateWrap = $("#rate-wrap"), status = $("#rates-status"), quick = $("#cur-quick");
   sel.innerHTML = CURRENCIES.map((c) => `<option value="${c.code}">${c.code} · ${c.name}</option>`).join("");
 
   function paint() {
     const info = Money.info();
     sel.value = info.code;
+    // Recent currencies in list order, so the buttons don't shuffle under the pointer.
+    const recent = CURRENCIES.filter((c) => Money.recent.includes(c.code));
+    quick.hidden = recent.length < 2;
+    quick.innerHTML = recent.map((c) =>
+      `<button type="button" data-cur="${c.code}" aria-pressed="${c.code === info.code}" title="${c.name}">${c.code}</button>`).join("");
     rateWrap.hidden = info.code === "USD";
     $("#rate-code").textContent = info.code;
     if (document.activeElement !== rateIn) rateIn.value = Money.rate();
@@ -152,10 +177,10 @@ const Money = (() => {
       : Money.updated ? `Rate from ${Money.updated.replace(/ \d\d:\d\d:\d\d \+0000$/, "")}`
       : "Approximate rate";
   }
-  sel.addEventListener("change", () => Money.setCode(sel.value));
-  rateIn.addEventListener("input", () => { const r = parseFloat(rateIn.value); if (r > 0) Money.setRate(r); });
-  rateIn.addEventListener("change", paint);
-  $("#rates-update").addEventListener("click", async () => {
+  let fetching = false;
+  async function fetchRates() {
+    if (fetching) return;
+    fetching = true;
     status.textContent = "Fetching rates…";
     try {
       const res = await fetch(RATES_URL);
@@ -165,8 +190,23 @@ const Money = (() => {
     } catch (err) {
       console.error("Rate update failed", err);
       status.textContent = "Couldn't reach the rate service. Type a rate instead.";
+    } finally {
+      fetching = false;
     }
+  }
+  // Picking a floating currency refreshes rates older than a day, so no extra click is needed.
+  function pick(c) {
+    Money.setCode(c);
+    if (Money.stale()) fetchRates();
+  }
+  sel.addEventListener("change", () => pick(sel.value));
+  quick.addEventListener("click", (e) => {
+    const b = e.target.closest("[data-cur]");
+    if (b) { pick(b.dataset.cur); quick.querySelector(`[data-cur="${b.dataset.cur}"]`).focus(); }
   });
+  rateIn.addEventListener("input", () => { const r = parseFloat(rateIn.value); if (r > 0) Money.setRate(r); });
+  rateIn.addEventListener("change", paint);
+  $("#rates-update").addEventListener("click", fetchRates);
   Money.onChange(paint);
   paint();
 })();
@@ -241,8 +281,9 @@ const Tabs = (() => {
   }
   function boot() {
     const h = location.hash.slice(1);
-    // "#track" opens the tracker; any other hash is a shared estimate.
+    // "#track" opens the tracker, "#pay…" the pay planner; any other hash is a shared estimate.
     if (h === "track") return open("track", { remember: false });
+    if (h === "pay" || h.startsWith("pay,")) return open("pay", { remember: false });
     if (h) return open("estimate", { remember: false });
     let saved = null;
     try { saved = localStorage.getItem(KEY); } catch { /* private mode */ }

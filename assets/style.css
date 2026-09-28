@@ -1,4 +1,4 @@
-/* ── Kolide Studio tokens ─────────────────────────────────────────────
+/* ── tokens ───────────────────────────────────────────────────────────
    Three pinned colors: #111111 carbon · #EADDCA almond · #C7352A ember.
    Light = almond ground. Dark = carbon ground. Same three, roles swapped. */
 @font-face {
@@ -85,7 +85,7 @@ button, input, select { font: inherit; color: inherit; }
 .wrap { max-width: 1200px; margin: 0 auto; padding: 18px 20px 32px; }
 
 /* the label style used by legends, eyebrows, table heads, the colophon */
-.eyebrow, legend, .totals th, .figures th, .colophon, .byline, .presets > span, .notes summary, .notes h3 {
+.eyebrow, legend, .totals th, .figures th, .colophon, .presets > span, .notes summary, .notes h3 {
   font-size: 11.5px;
   font-weight: 700;
   font-stretch: 90%;
@@ -116,10 +116,6 @@ h1 {
   letter-spacing: -0.01em;
   margin: 0;
 }
-.byline { display: flex; align-items: center; gap: 10px; color: var(--faint); padding-bottom: 4px; }
-.byline a, .colophon a { color: var(--ink); text-decoration: none; }
-.byline a:hover, .colophon a:hover { color: var(--accent); }
-.sep { width: 5px; height: 5px; background: var(--faint); flex: none; }
 
 /* ── tabs + currency ────────────────────────────────────────────────── */
 .appbar {
@@ -148,6 +144,7 @@ h1 {
 .money { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; font-size: 13.5px; color: var(--muted); }
 .money select, .money input { border: 1px solid var(--line); background: var(--field); padding: 5px 8px; height: 34px; }
 .money select { max-width: 210px; }
+.money .seg button { padding: 0 10px; height: 32px; }
 .money input { width: 104px; text-align: right; }
 .money .hint { font-size: 12px; }
 
@@ -211,6 +208,9 @@ h1 {
 .sw.cut    { background: var(--bar-cut); }
 .sw.tax    { background: var(--bar-tax); background-image: repeating-linear-gradient(135deg, var(--line) 0 3px, transparent 3px 7px); }
 .sw.take   { background: var(--accent); }
+.sw.unpaid { background: color-mix(in srgb, var(--accent) 22%, transparent); border: 1px solid var(--accent); }
+.sw.costs  { background: var(--bar-tax); }
+.sw.cash   { height: 0; border-top: 2px solid var(--ink); }
 
 .chart-box { position: relative; }
 .chart-box canvas { touch-action: pan-y; }
@@ -266,7 +266,6 @@ h1 {
   gap: 6px 20px;
   color: var(--faint);
 }
-.colophon .byline { padding-bottom: 0; }
 .colophon .ver { color: var(--accent); }
 
 /* ════════════════════════════════════════════════════════════════════
@@ -613,6 +612,17 @@ table.log { width: 100%; border-collapse: collapse; min-width: 480px; }
 .sale label { font-size: 12px; color: var(--muted); display: block; }
 .data-btns { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 14px; }
 
+/* ════════════════════════════════════════════════════════════════════
+   Pay yourself
+   ════════════════════════════════════════════════════════════════════ */
+.num.amount { width: 170px; }
+.pay-line { font-size: clamp(18px, 2.2vw, 21px); font-weight: 700; font-stretch: 85%; line-height: 1.3; margin: 10px 0 16px; }
+.pay-line .short, .ticker .v.short { color: var(--accent); }
+.pay-chart { height: 260px; margin-bottom: 8px; }
+.pay-months { margin-top: 28px; }
+.totals .big.nil { color: var(--faint); }
+.totals tr.short .left { color: var(--accent); }
+
 /* ── narrow screens ─────────────────────────────────────────────────── */
 @media (max-width: 880px) {
   .wrap { padding: 20px 16px 44px; }
@@ -632,9 +642,11 @@ table.log { width: 100%; border-collapse: collapse; min-width: 480px; }
   .figures .gross { display: none; }
   .num { width: 118px; }
   .num.wide { width: 132px; }
+  .num.amount { width: 150px; }
+  .pay-chart { height: 240px; }
   .est-chart { height: 200px; }
   .tabs { width: 100%; }
-  .tab { flex: 1; padding: 9px 8px; }
+  .tab { flex: 1; padding: 9px 6px; font-size: 14px; }
 }
 
 @media (prefers-reduced-motion: reduce) {

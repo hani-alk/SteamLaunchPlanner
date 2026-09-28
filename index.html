@@ -6,17 +6,17 @@
 <!-- Only this site's own scripts run, and the only outside request is the exchange-rate lookup. -->
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data:; connect-src https://open.er-api.com; base-uri 'none'; form-action 'none'" />
 <meta name="referrer" content="no-referrer" />
-<title>Steam Sales Estimator</title>
-<meta name="description" content="Rough ranges for Steam copies sold and take-home revenue: estimated from wishlists before launch, projected from your daily sales after it." />
+<title>Steam Launch Planner</title>
+<meta name="description" content="Rough ranges for Steam copies sold and take-home revenue, estimated from wishlists before launch and projected from daily sales after it, plus a plan for paying yourself from the cash you have." />
 <meta name="theme-color" content="#EADDCA" media="(prefers-color-scheme: light)" />
 <meta name="theme-color" content="#111111" media="(prefers-color-scheme: dark)" />
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%23111111'/%3E%3Crect x='7' y='7' width='18' height='18' fill='%23C7352A'/%3E%3C/svg%3E" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%23111111'/%3E%3Crect x='6' y='18' width='5' height='8' fill='%23EADDCA'/%3E%3Crect x='13.5' y='13' width='5' height='13' fill='%23EADDCA'/%3E%3Crect x='21' y='6' width='5' height='20' fill='%23C7352A'/%3E%3C/svg%3E" />
 <link rel="preload" href="assets/archivo.woff2" as="font" type="font/woff2" crossorigin />
-<link rel="stylesheet" href="assets/style.css?v=3.12" />
+<link rel="stylesheet" href="assets/style.css?v=3.13" />
 
 <meta property="og:type" content="website" />
-<meta property="og:title" content="Steam Sales Estimator" />
-<meta property="og:description" content="Rough ranges for Steam copies sold and take-home revenue, before and after launch." />
+<meta property="og:title" content="Steam Launch Planner" />
+<meta property="og:description" content="Rough ranges for Steam copies sold and take-home revenue before and after launch, and a plan for paying yourself." />
 <meta name="twitter:card" content="summary" />
 </head>
 <body>
@@ -24,23 +24,18 @@
 <div class="wrap">
 
   <header class="mast">
-    <div>
-      <h1>Steam Sales Estimator</h1>
-    </div>
-    <div class="byline">
-      <a href="https://hanialkarrain.com" target="_blank" rel="noopener">Hani</a>
-      <span class="sep" aria-hidden="true"></span>
-      <a href="https://kolidestudio.com" target="_blank" rel="noopener">Kolide Studio</a>
-    </div>
+    <h1>Steam Launch Planner</h1>
   </header>
 
   <nav class="appbar">
     <div class="tabs" role="tablist" aria-label="Stage">
       <button class="tab" role="tab" id="tab-estimate" data-view="estimate" aria-controls="view-estimate" aria-selected="true">Before launch</button>
       <button class="tab" role="tab" id="tab-track" data-view="track" aria-controls="view-track" aria-selected="false" tabindex="-1">After launch</button>
+      <button class="tab" role="tab" id="tab-pay" data-view="pay" aria-controls="view-pay" aria-selected="false" tabindex="-1">Pay yourself</button>
     </div>
     <div class="money">
       <label for="cur">Money in</label>
+      <div class="seg" id="cur-quick" role="group" aria-label="Recent currencies" hidden></div>
       <select id="cur"></select>
       <span id="rate-wrap" hidden>1 USD = <input id="rate" type="number" min="0" step="any" inputmode="decimal" aria-label="Exchange rate" /> <span id="rate-code"></span></span>
       <button class="btn-quiet" type="button" id="rates-update">Update rates</button>
@@ -523,22 +518,162 @@
     </div>
   </section>
 
+  <!-- ════════════════════ Pay yourself ════════════════════ -->
+  <section id="view-pay" role="tabpanel" aria-labelledby="tab-pay" hidden>
+
+    <div class="ticker" aria-hidden="true">
+      <span class="eyebrow">Cash plan</span>
+      <span class="v" id="pay-tick">—</span>
+    </div>
+
+    <div class="cols">
+      <form id="pay-controls" autocomplete="off" novalidate>
+
+        <fieldset>
+          <legend>What you have</legend>
+          <div class="field">
+            <label for="p-cash">Cash on hand</label>
+            <div class="num amount"><input type="number" id="p-cash" min="0" step="1" inputmode="numeric" /><span class="suf cur">USD</span></div>
+            <div class="tip">After setting money aside for tax.</div>
+          </div>
+        </fieldset>
+
+        <fieldset>
+          <legend>Back pay</legend>
+          <div class="field">
+            <label for="p-worked">Months you worked unpaid</label>
+            <div class="num"><input type="number" id="p-worked" min="0" max="120" step="1" inputmode="numeric" /><span class="suf">mo</span></div>
+          </div>
+
+          <div class="field">
+            <label for="p-backPer">Back pay per month worked</label>
+            <div class="num amount"><input type="number" id="p-backPer" min="0" step="1" inputmode="numeric" /><span class="suf cur">USD</span></div>
+          </div>
+
+          <div class="field">
+            <label for="p-spread">Spread back pay over</label>
+            <div class="num"><input type="number" id="p-spread" min="1" max="60" step="1" inputmode="numeric" /><span class="suf">mo</span></div>
+            <div class="tip">Use 1 to take it in one payment.</div>
+          </div>
+        </fieldset>
+
+        <fieldset>
+          <legend>From now on</legend>
+          <div class="field">
+            <label for="p-salary">Monthly salary from now</label>
+            <div class="num amount"><input type="number" id="p-salary" min="0" step="1" inputmode="numeric" /><span class="suf cur">USD</span></div>
+          </div>
+
+          <div class="field">
+            <label for="p-costs">Other monthly costs</label>
+            <div class="num amount"><input type="number" id="p-costs" min="0" step="1" inputmode="numeric" /><span class="suf cur">USD</span></div>
+            <div class="tip">Software, gear, contractors, marketing.</div>
+          </div>
+
+          <div class="field">
+            <label for="p-ahead">Months ahead</label>
+            <div class="num"><input type="number" id="p-ahead" min="1" max="120" step="1" inputmode="numeric" /><span class="suf">mo</span></div>
+          </div>
+        </fieldset>
+      </form>
+
+      <aside class="panel result">
+        <p class="sr-only" aria-live="polite" id="pay-live"></p>
+
+        <div class="result-head">
+          <span class="eyebrow">Cash plan</span>
+        </div>
+        <p class="pay-line"><span id="pay-owed"></span> <span id="pay-rest"></span></p>
+
+        <div class="chart-box pay-chart"><canvas id="pay-chart" role="img"></canvas></div>
+        <div class="legend">
+          <span><i class="sw unpaid"></i>Unpaid work</span>
+          <span><i class="sw cut"></i>Salary</span>
+          <span><i class="sw take"></i>Back pay</span>
+          <span><i class="sw costs"></i>Other costs</span>
+          <span><i class="sw cash"></i>Cash left (right axis)</span>
+          <span><i class="sw mid"></i>Below zero</span>
+          <span><i class="sw now"></i>Now</span>
+        </div>
+
+        <div class="kpis">
+          <div class="kpi"><div class="k">Back pay owed</div><div class="v" id="pk-owed">—</div></div>
+          <div class="kpi"><div class="k">Paid as</div><div class="v" id="pk-inst">—</div></div>
+          <div class="kpi"><div class="k">Each month after</div><div class="v" id="pk-monthly">—</div></div>
+        </div>
+
+        <div class="tools">
+          <button class="btn" type="button" id="pay-copy">Copy summary</button>
+          <button class="btn" type="button" id="pay-link">Copy link</button>
+          <button class="btn-quiet" type="button" id="pay-reset">Reset</button>
+        </div>
+      </aside>
+    </div>
+
+    <div class="panel pay-months totals-wrap">
+      <table class="totals">
+        <thead><tr>
+          <th scope="col">Month</th>
+          <th scope="col">Salary <span class="th-cur"></span></th>
+          <th scope="col">Back pay <span class="th-cur"></span></th>
+          <th scope="col">Other costs <span class="th-cur"></span></th>
+          <th scope="col">Cash left <span class="th-cur"></span></th>
+        </tr></thead>
+        <tbody>
+          <tr class="group"><th colspan="5">Month by month <span>cash left is after that month's payments</span></th></tr>
+        </tbody>
+        <tbody id="pay-rows"></tbody>
+      </table>
+    </div>
+
+    <details class="notes">
+      <summary>How it's calculated</summary>
+      <p><b>A cash plan, not advice.</b> This shows how long the cash you already have
+         lasts if you pay yourself back pay and a salary from it. It isn't tax or
+         financial advice. How much to set aside for tax should come from an
+         accountant; take it out before you enter your cash on hand.</p>
+      <p><b>On its own.</b> Wishlists, sales and forecasts from the other tabs aren't
+         used, and neither are Steam payouts still to come. Only the cash on hand counts.</p>
+      <ol class="steps">
+        <li><b>Back pay owed</b>
+          <code>months worked unpaid × back pay per month</code></li>
+        <li><b>Each back pay payment</b>
+          <code>back pay owed ÷ months to spread it over</code>
+          <span>Paid this month and each month after it until it's all paid.</span></li>
+        <li><b>Cash left at the end of each month</b>
+          <code>cash left − salary − other costs − back pay payment</code>
+          <span>The first month it goes below zero is when your cash runs out.</span></li>
+        <li><b>How long it lasts</b>
+          <code>(cash on hand − back pay owed) ÷ (salary + other costs)</code>
+          <span>Shown when the cash still lasts past the months ahead.</span></li>
+      </ol>
+
+      <h3>Assumptions</h3>
+      <dl>
+        <dt>Every month is the same</dt>
+        <dd>Salary and costs don't change: no raises, one-off purchases or interest.</dd>
+        <dt>Payments start this month</dt>
+        <dd>Month one is the current calendar month. The months worked unpaid are the
+            ones just before it.</dd>
+        <dt>Amounts are in your currency</dt>
+        <dd>They follow the currency picked at the top. Switching it converts them at
+            the current rate; updating rates leaves them as typed.</dd>
+      </dl>
+    </details>
+  </section>
+
   <footer class="colophon">
     <!-- bump this on every change that alters the numbers or the inputs, and the ?v= on the asset links in the head and at the end so browsers fetch the new files -->
-    <span>Steam Sales Estimator <span class="ver" id="ver">v3.12</span> · Sep 2026</span>
-    <span class="byline">
-      <a href="https://hanialkarrain.com" target="_blank" rel="noopener">Hani</a>
-      <span class="sep" aria-hidden="true"></span>
-      <a href="https://kolidestudio.com" target="_blank" rel="noopener">Kolide Studio</a>
-    </span>
+    <span>Steam Launch Planner <span class="ver" id="ver">v3.13</span> · Sep 2026</span>
   </footer>
 
 </div>
 
-<script src="assets/chart.umd.min.js?v=3.12"></script>
-<script src="assets/common.js?v=3.12"></script>
-<script src="assets/estimate.js?v=3.12"></script>
-<script src="assets/track.js?v=3.12"></script>
-<script src="assets/boot.js?v=3.12"></script>
+<script src="assets/chart.umd.min.js?v=3.13"></script>
+<script src="assets/common.js?v=3.13"></script>
+<script src="assets/estimate.js?v=3.13"></script>
+<script src="assets/track.js?v=3.13"></script>
+<script src="assets/pay.js?v=3.13"></script>
+<script src="assets/boot.js?v=3.13"></script>
 </body>
 </html>

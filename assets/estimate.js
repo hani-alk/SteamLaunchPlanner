@@ -425,7 +425,7 @@
       "",
       `Take-home in ${Money.code} after refunds, Steam's cut and ${fmtPct(v.tax, 0)} withholding on the ${fmtPct(v.us, 0)} of sales from the US. ` +
         "Ranges, not predictions: results can land outside them.",
-      `Steam Sales Estimator ${$("#ver").textContent} · kolidestudio.com`,
+      `Steam Launch Planner ${$("#ver").textContent}`,
     ];
     toClipboard(lines.join("\n"), e.currentTarget, "Copied");
   });
@@ -450,7 +450,7 @@
   for (const k of KEYS) setValue(k, parseFloat(FIELDS[k].num.value));
   let booted = false, preset = null;
   const hash = decodeURIComponent(location.hash.slice(1));
-  if (hash && hash !== "track") booted = apply(hash);
+  if (hash && hash !== "track" && hash !== "pay" && !hash.startsWith("pay,")) booted = apply(hash);
   if (!booted) {
     try { const stored = localStorage.getItem(KEY); if (stored) booted = apply(stored); } catch { /* private mode */ }
   }
