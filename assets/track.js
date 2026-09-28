@@ -793,6 +793,21 @@
     },
   };
 
+  // Small dots on a clear ground, drawn at device resolution so they stay crisp.
+  function dotPattern(color) {
+    const dpr = window.devicePixelRatio || 1, size = 4;
+    const tile = document.createElement("canvas");
+    tile.width = tile.height = Math.round(size * dpr);
+    const g = tile.getContext("2d");
+    g.fillStyle = color;
+    g.beginPath();
+    g.arc(tile.width / 2, tile.height / 2, 0.9 * dpr, 0, Math.PI * 2);
+    g.fill();
+    const pattern = g.createPattern(tile, "repeat");
+    pattern.setTransform(new DOMMatrix().scale(1 / dpr));
+    return pattern;
+  }
+
   function renderChart(model, projections, frame) {
     if (typeof window.Chart === "undefined") {
       $("#chartEmpty").hidden = false;
@@ -814,8 +829,18 @@
     const hi = cut(buildSeries(model, projections.high, H).forecast);
 
     const ink = cssVar("--ink"), accent = cssVar("--accent"), muted = cssVar("--muted"), faint = cssVar("--faint");
+    // The last logged day isn't over yet when it's marked in progress or dated today; draw it dotted.
+    const openDay = state.settings.lastDayPartial || model.lastDate >= todayISO() ? model.n - 1 - frame.start : null;
+    const isOpen = (ctx) => ctx.dataIndex === openDay;
+    const dots = dotPattern(ink);
     const datasets = [];
-    if (shown.actual) datasets.push({ label: "Logged", type: cumulative ? "line" : "bar", data: forLog(cut(mid.actual)), backgroundColor: ink, borderColor: ink, borderWidth: cumulative ? 2.5 : 0, pointRadius: 0, order: 2 });
+    if (shown.actual) {
+      datasets.push(cumulative
+        ? { label: "Logged", type: "line", data: forLog(cut(mid.actual)), borderColor: ink, borderWidth: 2.5, pointRadius: 0, order: 2,
+            segment: { borderDash: (ctx) => (ctx.p1DataIndex === openDay ? [2, 4] : undefined) } }
+        : { label: "Logged", type: "bar", data: forLog(cut(mid.actual)), order: 2,
+            backgroundColor: (ctx) => (isOpen(ctx) ? dots : ink), borderColor: ink, borderWidth: (ctx) => (isOpen(ctx) ? 1 : 0) });
+    }
     if (shown.forecast) datasets.push({ label: "Middle case", type: "line", data: forLog(cut(mid.forecast)), borderColor: accent, borderWidth: 2.5, borderDash: [6, 5], pointRadius: 0, fill: false, order: 0 });
     if (shown.range) {
       datasets.push({ label: "High", type: "line", data: forLog(hi), borderWidth: 0, pointRadius: 0, backgroundColor: withAlpha(accent, 0.2), fill: "+1", order: 3 });
@@ -848,7 +873,7 @@
             callbacks: {
               title: (items) => (items.length ? fmtLongDate(addDaysISO(model.launch, frame.start + items[0].dataIndex)) : ""),
               label: (item) => {
-                if (item.dataset.label === "Logged") return `Logged: ${fmtExact(item.raw)}`;
+                if (item.dataset.label === "Logged") return `Logged: ${fmtExact(item.raw)}${item.dataIndex === openDay ? " so far, day in progress" : ""}`;
                 if (item.dataset.label !== "Middle case") return `${item.dataset.label}: ${fmtEst(item.raw)}`;
                 const i = item.dataIndex;
                 const range = lo[i] != null && hi[i] != null ? ` (${fmtRange(lo[i], hi[i], fmtEst)})` : "";
