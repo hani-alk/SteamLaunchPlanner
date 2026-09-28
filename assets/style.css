@@ -100,23 +100,22 @@ button, input, select { font: inherit; color: inherit; }
 .mast {
   display: flex;
   flex-wrap: wrap;
-  align-items: flex-end;
+  align-items: baseline;
   justify-content: space-between;
-  gap: 12px 24px;
+  gap: 8px 24px;
   padding-bottom: 10px;
   border-bottom: 3px solid var(--accent);
 }
 h1 {
-  font-size: clamp(28px, 4vw, 44px);
-  font-weight: 800;
-  font-stretch: 68%;
+  /* quieter than the game title below it; the accent rule carries the brand */
+  font-size: clamp(24px, 3vw, 30px);
+  font-weight: 700;
+  font-stretch: 72%;
+  color: var(--muted);
   line-height: 1;
   letter-spacing: -0.01em;
   margin: 0;
 }
-/* the intro shrinks beside the byline rather than pushing it to its own row */
-.mast > div:first-child { flex: 1 1 420px; min-width: 0; }
-.lede { color: var(--muted); margin: 4px 0 0; font-size: 14px; }
 .byline { display: flex; align-items: center; gap: 10px; color: var(--faint); padding-bottom: 4px; }
 .byline a, .colophon a { color: var(--ink); text-decoration: none; }
 .byline a:hover, .colophon a:hover { color: var(--accent); }
