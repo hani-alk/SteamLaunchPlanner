@@ -23,7 +23,7 @@
     reviews: { positive: 0, negative: 0 },
     plannedSales: [],
     chartPrefs: {
-      metric: "units", view: "daily", scale: "linear", preset: "30", totals: "milestones",
+      metric: "units", view: "daily", scale: "linear", preset: "30", totals: "milestones", panel: "totals",
       series: { actual: true, forecast: true, range: true, average: false, periods: true, now: true },
     },
   };
@@ -69,6 +69,7 @@
   const CHART_CHOICES = {
     metric: ["units", "net", "payout"], view: ["daily", "cumulative"], scale: ["linear", "log"],
     preset: FRAME_PRESETS, totals: ["milestones", "months"],
+    panel: ["totals", "log", "discounts", "money", "audience", "data"],
   };
 
   // Each field takes the type of its default; strings are dates.
@@ -159,6 +160,8 @@
       return;
     }
     state = mergeState(JSON.parse(raw));
+    // Nothing logged yet: start where the first day goes in.
+    if (!state.days.length) state.chartPrefs.panel = "log";
     activeId = id;
     customFrame = null;
     $("#games").hidden = true;
@@ -398,9 +401,24 @@
     fillBound();
     if (document.activeElement !== $("#titleInput")) $("#titleInput").value = state.gameName;
     renderToggles();
+    renderPanels();
     renderLog();
     renderSales();
     recompute();
+  }
+
+  function renderPanels() {
+    for (const tab of $$(".sec-tab")) {
+      const on = tab.dataset.panel === state.chartPrefs.panel;
+      tab.setAttribute("aria-selected", String(on));
+      tab.tabIndex = on ? 0 : -1;
+      $("#spanel-" + tab.dataset.panel).hidden = !on;
+    }
+  }
+  function openPanel(name) {
+    state.chartPrefs.panel = name;
+    renderPanels();
+    scheduleSave();
   }
 
   function fillBound() {
@@ -818,9 +836,10 @@
         const px = x.getPixelForValue(o.nowIndex) + (o.nowOffset ? step / 2 : 0);
         const text = "Last logged";
         const w = ctx.measureText(text).width;
-        // Right of the line when there's room; otherwise to its left, up top, clear of the last bar.
-        if (px + 5 + w <= area.right) label(text, px + 5, area.bottom - 6, o.nowColor);
-        else label(text, px - 5 - w, area.top + 32, o.nowColor);
+        // Daily sales sit low by now and a running total sits high, so the label goes where the data isn't:
+        // near the top for daily, the bottom for cumulative. Right of the line when there's room, else left.
+        const y = o.nowOffset ? area.top + 32 : area.bottom - 6;
+        label(text, px + 5 + w <= area.right ? px + 5 : px - 5 - w, y, o.nowColor);
       }
       ctx.restore();
     },
@@ -1146,6 +1165,17 @@
     });
   }
   $("#resetFrame").addEventListener("click", () => { customFrame = null; recompute(); });
+
+  for (const tab of $$(".sec-tab")) {
+    tab.addEventListener("click", () => openPanel(tab.dataset.panel));
+    tab.addEventListener("keydown", (e) => {
+      if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
+      const tabs = $$(".sec-tab"), i = tabs.indexOf(tab);
+      const next = tabs[(i + (e.key === "ArrowRight" ? 1 : tabs.length - 1)) % tabs.length];
+      openPanel(next.dataset.panel);
+      next.focus();
+    });
+  }
 
   $("#addDay").addEventListener("click", () => {
     const last = state.days[state.days.length - 1];
