@@ -18,7 +18,8 @@
     settings: {
       price: 9.99, launchDiscountPct: 10, launchDiscountEnds: "", taxRegionalPct: 20,
       refundFallbackPct: 10, withholdingPct: 30, usSharePct: 35, wishlists: 0, tailPct: 1.5,
-      lastDayPartial: false, lastDayHours: 12,
+      // Blank hours means work them out from Steam's clock; the old lastDayHours key is dropped on load.
+      lastDayPartial: false, lastDayHoursManual: "",
     },
     reviews: { positive: 0, negative: 0 },
     plannedSales: [],
@@ -44,6 +45,22 @@
   }
   function daysBetween(a, b) {
     return Math.round((Date.parse(b + "T00:00:00Z") - Date.parse(a + "T00:00:00Z")) / 86400000);
+  }
+  // Steamworks days run midnight to midnight Pacific time.
+  const steamClock = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/Los_Angeles", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hourCycle: "h23",
+  });
+  function steamNow() {
+    const p = Object.fromEntries(steamClock.formatToParts(new Date()).map((x) => [x.type, x.value]));
+    return { date: `${p.year}-${p.month}-${p.day}`, hours: +p.hour + +p.minute / 60 };
+  }
+  // Hours into the last logged day: what was typed, else from Steam's clock. A day
+  // Steam has already closed is complete.
+  function lastDayHours(lastDate) {
+    const typed = num(state.settings.lastDayHoursManual, NaN);
+    if (Number.isFinite(typed)) return clamp(typed, 1, 24);
+    const now = steamNow();
+    return lastDate < now.date ? 24 : clamp(now.hours, 1, 24);
   }
   function todayISO() {
     const t = new Date();
@@ -72,7 +89,9 @@
     panel: ["totals", "log", "discounts", "money", "audience", "data"],
   };
 
-  // Each field takes the type of its default; strings are dates.
+  // Each field takes the type of its default: flags stay flags, the named dates must be
+  // ISO dates, and everything else is a number or blank.
+  const DATE_FIELDS = new Set(["launchDiscountEnds"]);
   function cleanFields(defaults, loaded) {
     const out = { ...defaults };
     if (!isObj(loaded)) return out;
@@ -80,8 +99,8 @@
       if (!(k in loaded)) continue;
       const v = loaded[k];
       if (typeof d === "boolean") out[k] = typeof v === "boolean" ? v : d;
-      else if (typeof d === "number") out[k] = cleanNum(v);
-      else out[k] = cleanDate(v);
+      else if (DATE_FIELDS.has(k)) out[k] = cleanDate(v);
+      else out[k] = cleanNum(v);
     }
     return out;
   }
@@ -270,10 +289,17 @@
       if (d.netUsd !== "" && d.netUsd != null && Number.isFinite(parseFloat(d.netUsd))) net[i] = (net[i] || 0) + parseFloat(d.netUsd);
     }
 
-    // A day still in progress is scaled up to a full day for fitting.
+    // A day still in progress is projected to a full day for fitting. What's left of it is
+    // expected at a blend of today's pace so far and the whole day before, trusting today's
+    // pace more as the day goes on: a few hours say little about a whole day.
     const fitted = actual.slice();
-    const hours = clamp(num(s.lastDayHours, 24), 1, 24);
-    if (s.lastDayPartial && hours < 24) fitted[n - 1] = actual[n - 1] * 24 / hours;
+    const hours = lastDayHours(lastDate);
+    if (s.lastDayPartial && hours < 24) {
+      const f = hours / 24, soFar = actual[n - 1];
+      const pace = soFar / f;
+      const expected = n > 1 ? f * pace + (1 - f) * actual[n - 2] : pace;
+      fitted[n - 1] = soFar + (1 - f) * expected;
+    }
 
     const totalUnits = sum(actual);
     const totalRefunds = sum(refunds);
@@ -521,6 +547,8 @@
     renderFrameSummary(model, projections, frame);
     renderChart(model, projections, frame);
 
+    renderHoursHint(model);
+
     $("#logMsg").className = "msg";
     $("#logMsg").textContent = model.missingDays > 0
       ? `${model.missingDays} day${model.missingDays > 1 ? "s are" : " is"} missing between your first and last date and count as zero sales.`
@@ -629,11 +657,26 @@
     return rows;
   }
 
+  function renderHoursHint(model) {
+    const now = steamNow();
+    const typed = Number.isFinite(num(state.settings.lastDayHoursManual, NaN));
+    $("#hoursHint").textContent = typed
+      ? "Clear it to work this out from Steam's clock."
+      : model.lastDate < now.date
+        ? `Steam's day for ${fmtDate(model.lastDate)} has ended, so it counts in full.`
+        : `Auto: ${now.hours.toFixed(1)} hours into Steam's day, which runs midnight to midnight Pacific time.`;
+  }
+
   function renderNotes(model, mid) {
     const lines = [];
     lines.push(`In the middle case, daily sales fall about ${((1 - mid.decay) * 100).toFixed(0)}% a day before settling near ${fmtRough(mid.tail0)} copies a day.`);
     if (model.n === 1) lines.push("With one day logged the forecast leans on a typical launch curve, so the range is wide. It narrows as you add days.");
-    if (state.settings.lastDayPartial) lines.push(`The last logged day is projected to finish around ${fmtRough(model.fitted[model.n - 1])} copies.`);
+    if (state.settings.lastDayPartial) {
+      const h = lastDayHours(model.lastDate);
+      lines.push(h >= 24
+        ? "The last logged day is marked in progress, but Steam's day for it has ended, so it counts in full."
+        : `The last logged day is projected to finish around ${fmtRough(model.fitted[model.n - 1])} copies, ${h.toFixed(1)} hours into Steam's day.`);
+    }
     lines.push(model.calibrated
       ? "Revenue uses your Steamworks net per copy."
       : "Revenue is estimated from price, VAT, regional pricing and refunds. Add Steamworks net figures to use your real numbers.");
@@ -890,7 +933,8 @@
 
     const ink = cssVar("--ink"), accent = cssVar("--accent"), muted = cssVar("--muted"), faint = cssVar("--faint");
     // The last logged day isn't over yet when it's marked in progress or dated today; draw it dotted.
-    const openDay = state.settings.lastDayPartial || model.lastDate >= todayISO() ? model.n - 1 - frame.start : null;
+    const openDay = (state.settings.lastDayPartial && lastDayHours(model.lastDate) < 24) || model.lastDate >= steamNow().date
+      ? model.n - 1 - frame.start : null;
     const isOpen = (ctx) => ctx.dataIndex === openDay;
     const dots = dotPattern(ink);
     const datasets = [];
@@ -1174,6 +1218,11 @@
     });
   }
   $("#resetFrame").addEventListener("click", () => { customFrame = null; recompute(); });
+
+  // Steam's clock moves on, so an in-progress day on auto hours is re-projected every few minutes.
+  setInterval(() => {
+    if (activeId && state.settings.lastDayPartial && state.settings.lastDayHoursManual === "") recompute();
+  }, 5 * 60 * 1000);
 
   // Dropdowns close on a click outside them or on Escape.
   document.addEventListener("click", (e) => {
