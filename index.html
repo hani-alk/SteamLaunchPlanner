@@ -12,7 +12,7 @@
 <meta name="theme-color" content="#111111" media="(prefers-color-scheme: dark)" />
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%23111111'/%3E%3Crect x='7' y='7' width='18' height='18' fill='%23C7352A'/%3E%3C/svg%3E" />
 <link rel="preload" href="assets/archivo.woff2" as="font" type="font/woff2" crossorigin />
-<link rel="stylesheet" href="assets/style.css?v=3.8" />
+<link rel="stylesheet" href="assets/style.css?v=3.9" />
 
 <meta property="og:type" content="website" />
 <meta property="og:title" content="Steam Sales Estimator" />
@@ -389,23 +389,25 @@
           <button type="button" class="sec-tab" role="tab" id="stab-data" data-panel="data" aria-controls="spanel-data">Forecast and data</button>
         </div>
         <div class="sec-panel totals-wrap" id="spanel-totals" role="tabpanel" aria-labelledby="stab-totals" hidden>
-          <div class="totals-split" id="totalsSplit" hidden>
-            <div class="eyebrow">Where logged sales go</div>
-            <div class="split" id="t-split" role="img">
-              <span class="seg-cut" id="t-seg-cut"></span>
-              <span class="seg-tax" id="t-seg-tax"></span>
-              <span class="seg-take" id="t-seg-take"></span>
+          <div class="totals-top">
+            <div class="totals-split" id="totalsSplit" hidden>
+              <div class="eyebrow">Where logged sales go</div>
+              <div class="split" id="t-split" role="img">
+                <span class="seg-cut" id="t-seg-cut"></span>
+                <span class="seg-tax" id="t-seg-tax"></span>
+                <span class="seg-take" id="t-seg-take"></span>
+              </div>
+              <div class="legend">
+                <span><i class="sw cut"></i><span id="tl-cut">Steam</span></span>
+                <span><i class="sw tax"></i><span id="tl-tax">Withheld</span></span>
+                <span><i class="sw take"></i><span id="tl-take">You</span></span>
+              </div>
             </div>
-            <div class="legend">
-              <span><i class="sw cut"></i><span id="tl-cut">Steam</span></span>
-              <span><i class="sw tax"></i><span id="tl-tax">Withheld</span></span>
-              <span><i class="sw take"></i><span id="tl-take">You</span></span>
-            </div>
-          </div>
-          <div class="totals-head">
-            <div class="seg" id="totalsSeg" role="group" aria-label="Totals by">
-              <button type="button" data-value="milestones">Milestones</button>
-              <button type="button" data-value="months">Month by month</button>
+            <div class="totals-head">
+              <div class="seg" id="totalsSeg" role="group" aria-label="Totals by">
+                <button type="button" data-value="milestones">Milestones</button>
+                <button type="button" data-value="months">Month by month</button>
+              </div>
             </div>
           </div>
           <table class="totals">
@@ -508,7 +510,7 @@
 
   <footer class="colophon">
     <!-- bump this on every change that alters the numbers or the inputs, and the ?v= on the asset links in the head and at the end so browsers fetch the new files -->
-    <span>Steam Sales Estimator <span class="ver" id="ver">v3.8</span> · Sep 2026</span>
+    <span>Steam Sales Estimator <span class="ver" id="ver">v3.9</span> · Sep 2026</span>
     <span class="byline">
       <a href="https://hanialkarrain.com" target="_blank" rel="noopener">Hani</a>
       <span class="sep" aria-hidden="true"></span>
@@ -518,10 +520,10 @@
 
 </div>
 
-<script src="assets/chart.umd.min.js?v=3.8"></script>
-<script src="assets/common.js?v=3.8"></script>
-<script src="assets/estimate.js?v=3.8"></script>
-<script src="assets/track.js?v=3.8"></script>
-<script src="assets/boot.js?v=3.8"></script>
+<script src="assets/chart.umd.min.js?v=3.9"></script>
+<script src="assets/common.js?v=3.9"></script>
+<script src="assets/estimate.js?v=3.9"></script>
+<script src="assets/track.js?v=3.9"></script>
+<script src="assets/boot.js?v=3.9"></script>
 </body>
 </html>
