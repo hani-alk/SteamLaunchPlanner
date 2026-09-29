@@ -1,5 +1,6 @@
-/* Pay yourself: back pay for the months worked unpaid and a salary from now
-   on, drawn from the cash already in hand, after setting shares of it aside.
+/* Pay yourself: back pay for the months worked unpaid, shares of what's left
+   paid out after it, and a salary from now on, drawn from the cash already in
+   hand after setting shares of it aside.
    Cash on hand can start from the payout logged in After launch; nothing else
    is read from the other views. */
 (() => {
@@ -25,10 +26,11 @@
   for (const k of KEYS) FIELDS[k].num = $("#p-" + k);
 
   // Last valid value per field, plus the currency and rate they're in, where
-  // cash on hand comes from ("" when typed) and the savings rows.
-  const state = { code: Money.code, rate: Money.rate(), source: "", savings: [] };
-  const MAX_SAVINGS = 12;
-  const cleanSaving = (label, pct) => ({
+  // cash on hand comes from ("" when typed), the savings rows and the shares
+  // paid out after back pay.
+  const state = { code: Money.code, rate: Money.rate(), source: "", savings: [], shares: [] };
+  const MAX_ROWS = 12;
+  const cleanRow = (label, pct) => ({
     label: String(label ?? "").slice(0, 40),
     pct: Math.round(clamp(num(pct), 0, 100) * 10) / 10,
   });
@@ -45,7 +47,9 @@
     for (const [k, x] of Object.entries(DEFAULTS)) setValue(k, x);
     state.source = "";
     state.savings = [];
+    state.shares = [];
     renderSavings();
+    renderShares();
   }
 
   // Follow the page's currency: convert on a switch, just note the rate otherwise.
@@ -115,49 +119,53 @@
     render();
   });
 
-  // ── savings rows: a label and a share of cash on hand ──
-  const savingsBox = $("#p-savings");
-  function renderSavings() {
-    savingsBox.innerHTML = state.savings.map((sv, i) => `
-      <div class="saving">
-        <input class="saving-name" type="text" maxlength="40" value="${escapeHtml(sv.label)}" placeholder="Label" data-saving="${i}" data-field="label" aria-label="Savings ${i + 1} label" />
-        <div class="num"><input type="number" min="0" max="100" step="0.5" inputmode="decimal" value="${sv.pct}" data-saving="${i}" data-field="pct" aria-label="Savings ${i + 1} percentage" /><span class="suf">%</span></div>
-        <button class="btn-quiet" type="button" data-del-saving="${i}" aria-label="Remove savings ${i + 1}">Remove</button>
-        <div class="tip" data-saving-amount="${i}"></div>
-      </div>`).join("");
-    $("#p-add-saving").hidden = state.savings.length >= MAX_SAVINGS;
+  // ── rows of a label and a percentage: savings take a share of cash on hand,
+  // shares take one of what's left after back pay ──
+  // The first row suggests a label; later ones start blank.
+  function rowList(key, box, add, noun, first) {
+    function paint() {
+      box.innerHTML = state[key].map((r, i) => `
+        <div class="saving">
+          <input class="saving-name" type="text" maxlength="40" value="${escapeHtml(r.label)}" placeholder="Label" data-row="${i}" data-field="label" aria-label="${noun} ${i + 1} label" />
+          <div class="num"><input type="number" min="0" max="100" step="0.5" inputmode="decimal" value="${r.pct}" data-row="${i}" data-field="pct" aria-label="${noun} ${i + 1} percentage" /><span class="suf">%</span></div>
+          <button class="btn-quiet" type="button" data-del-row="${i}" aria-label="Remove ${noun.toLowerCase()} ${i + 1}">Remove</button>
+          <div class="tip" data-amount="${i}"></div>
+        </div>`).join("");
+      add.hidden = state[key].length >= MAX_ROWS;
+    }
+    box.addEventListener("input", (e) => {
+      const el = e.target;
+      if (el.dataset.row == null) return;
+      const r = state[key][+el.dataset.row];
+      if (el.dataset.field === "label") r.label = el.value.slice(0, 40);
+      else if (Number.isFinite(parseFloat(el.value))) r.pct = cleanRow("", el.value).pct;
+      render();
+    });
+    // On blur, a percentage settles into its clean, in-range value.
+    box.addEventListener("change", (e) => {
+      const el = e.target;
+      if (el.dataset.row != null && el.dataset.field === "pct") el.value = state[key][+el.dataset.row].pct;
+    });
+    box.addEventListener("click", (e) => {
+      const del = e.target.closest("[data-del-row]");
+      if (!del) return;
+      state[key].splice(+del.dataset.delRow, 1);
+      paint();
+      render();
+      add.focus();
+    });
+    add.addEventListener("click", () => {
+      if (state[key].length >= MAX_ROWS) return;
+      state[key].push(state[key].length ? cleanRow("", 10) : cleanRow(...first));
+      paint();
+      render();
+      const names = box.querySelectorAll(".saving-name");
+      names[names.length - 1].focus();
+    });
+    return paint;
   }
-  savingsBox.addEventListener("input", (e) => {
-    const el = e.target;
-    if (el.dataset.saving == null) return;
-    const sv = state.savings[+el.dataset.saving];
-    if (el.dataset.field === "label") sv.label = el.value.slice(0, 40);
-    else if (Number.isFinite(parseFloat(el.value))) sv.pct = cleanSaving("", el.value).pct;
-    render();
-  });
-  // On blur, a percentage settles into its clean, in-range value.
-  savingsBox.addEventListener("change", (e) => {
-    const el = e.target;
-    if (el.dataset.saving != null && el.dataset.field === "pct") el.value = state.savings[+el.dataset.saving].pct;
-  });
-  savingsBox.addEventListener("click", (e) => {
-    const del = e.target.closest("[data-del-saving]");
-    if (!del) return;
-    state.savings.splice(+del.dataset.delSaving, 1);
-    renderSavings();
-    render();
-    $("#p-add-saving").focus();
-  });
-  // The first row suggests tax; later ones start blank.
-  $("#p-add-saving").addEventListener("click", () => {
-    if (state.savings.length >= MAX_SAVINGS) return;
-    const first = !state.savings.length;
-    state.savings.push(cleanSaving(first ? "Tax" : "", first ? 25 : 10));
-    renderSavings();
-    render();
-    const names = savingsBox.querySelectorAll(".saving-name");
-    names[names.length - 1].focus();
-  });
+  const renderSavings = rowList("savings", $("#p-savings"), $("#p-add-saving"), "Savings", ["Tax", 25]);
+  const renderShares = rowList("shares", $("#p-shares"), $("#p-add-share"), "Share", ["Reinvest", 20]);
 
   // ── months: month 0 is this calendar month ──
   const today = new Date();
@@ -176,17 +184,26 @@
     const pool = s.cash * Math.max(0, 1 - asideShare);
     const owed = s.worked * s.backPer;
     const installment = owed / s.spread;
+    // Shares come out of the cash actually left once the last back pay payment,
+    // and that month's salary and costs, are paid.
+    const sharesShare = sum(s.shares.map((r) => r.pct)) / 100;
+    const shareMonth = owed > 0 ? s.spread - 1 : 0;
     const monthly = s.salary + s.costs;
+    const afterBack = Math.max(0, pool - owed - monthly * (shareMonth + 1));
+    const out = afterBack * Math.min(1, sharesShare);
     const months = [];
     let left = pool, runsOut = null;
     for (let i = 0; i < s.ahead; i++) {
       const backPay = i < s.spread ? installment : 0;
-      left -= monthly + backPay;
-      months.push({ i, salary: s.salary, backPay, costs: s.costs, left });
+      const share = i === shareMonth ? out : 0;
+      left -= monthly + backPay + share;
+      months.push({ i, salary: s.salary, backPay, share, costs: s.costs, left });
       if (left < 0 && runsOut === null) runsOut = i;
     }
-    const covered = monthly > 0 ? Math.max(0, pool - owed) / monthly : Infinity;
-    return { aside, asideShare, pool, owed, installment, monthly, months, runsOut, covered, left };
+    const shares = s.shares.map((r) => ({ ...r, amount: afterBack * r.pct / 100 }));
+    const covered = monthly > 0 ? Math.max(0, pool - owed - out) / monthly : Infinity;
+    return { aside, asideShare, pool, owed, installment, afterBack, shares, sharesShare, out, shareMonth,
+      monthly, months, runsOut, covered, left };
   }
 
   function headline(p) {
@@ -254,7 +271,7 @@
     const outflow = (v) => (v > 0 ? -v : null);
 
     const axes = alignedAxes([
-      { lo: -(p.monthly + p.installment), hi: s.worked > 0 ? s.backPer : 0 },
+      { lo: -Math.max(0, ...p.months.map((m) => m.salary + m.costs + m.backPay + m.share)), hi: s.worked > 0 ? s.backPer : 0 },
       { lo: Math.min(0, ...p.months.map((m) => m.left)), hi: Math.max(0, p.pool) },
     ]);
     const below = (ctx) => ctx.p0.parsed.y < 0 || ctx.p1.parsed.y < 0;
@@ -266,6 +283,7 @@
           backgroundColor: withAlpha(accent, 0.22), borderColor: accent, borderWidth: 1 },
         { label: "Salary", data: future((m) => outflow(m.salary)), backgroundColor: cssVar("--bar-cut"), order: 1 },
         { label: "Back pay", data: future((m) => outflow(m.backPay)), backgroundColor: accent, order: 1 },
+        { label: "After back pay", data: future((m) => outflow(m.share)), backgroundColor: withAlpha(accent, 0.5), order: 1 },
         { label: "Other costs", data: future((m) => outflow(m.costs)), backgroundColor: cssVar("--bar-tax"), order: 1 },
         { label: "Cash left", type: "line", yAxisID: "y1", data: future((m) => m.left), order: 0,
           borderColor: ink, borderWidth: 2.5, pointRadius: 0, pointHoverRadius: 3, fill: false,
@@ -310,20 +328,34 @@
     }
     const h = headline(p);
     $("#pay-chart").setAttribute("aria-label",
-      `${plural(s.worked, "month")} worked unpaid, then ${plural(s.ahead, "month")} of salary, back pay and costs. ${h.owed} ${h.rest}`);
+      `${plural(s.worked, "month")} worked unpaid, then ${plural(s.ahead, "month")} of salary, back pay and costs. ${h.owed} ${sharesLine(p)} ${h.rest}`);
   }
 
   // ── render ──
+  // " for Tax, Rainy day and Next game", from the rows' labels.
+  function forNames(rows) {
+    const names = rows.map((r) => r.label.trim()).filter(Boolean);
+    return !names.length ? ""
+      : names.length === 1 ? ` for ${names[0]}`
+      : ` for ${names.slice(0, -1).join(", ")} and ${names[names.length - 1]}`;
+  }
+
   // What the savings rows take out, in a sentence.
   function asideLine(p) {
     if (!p.aside.length) return "";
     if (p.asideShare > 1) return `Savings add up to ${fmtPct(p.asideShare)} of cash on hand, so nothing is left for the plan.`;
-    const names = p.aside.map((a) => a.label.trim()).filter(Boolean);
-    const what = !names.length ? ""
-      : names.length === 1 ? ` for ${names[0]}`
-      : ` for ${names.slice(0, -1).join(", ")} and ${names[names.length - 1]}`;
-    return `${Money.local(sum(p.aside.map((a) => a.amount)))} (${fmtPct(p.asideShare)}) is set aside${what}, ` +
+    return `${Money.local(sum(p.aside.map((a) => a.amount)))} (${fmtPct(p.asideShare)}) is set aside${forNames(p.aside)}, ` +
       `so the plan starts from ${Money.local(p.pool)}.`;
+  }
+
+  // What the shares after back pay pay out, and when.
+  function sharesLine(p) {
+    if (!p.shares.length) return "";
+    const when = `in ${fmtShortMonth(p.shareMonth)}`;
+    if (p.sharesShare > 1) return `Shares after back pay add up to ${fmtPct(p.sharesShare)}, so all ` +
+      `${Money.local(p.afterBack)} left after back pay goes out ${when} and nothing is left for salary or costs.`;
+    return `${Money.local(p.out)} (${fmtPct(p.sharesShare)} of the ${Money.local(p.afterBack)} left after back pay) ` +
+      `goes out${forNames(p.shares)} ${when}.`;
   }
 
   function render() {
@@ -336,9 +368,18 @@
     $("#pay-aside").hidden = !aside;
     $("#pay-aside").textContent = aside;
     $("#pay-aside").classList.toggle("short", p.asideShare > 1);
-    for (const el of $$("[data-saving-amount]")) {
-      const a = p.aside[+el.dataset.savingAmount];
+    for (const el of $$("#p-savings [data-amount]")) {
+      const a = p.aside[+el.dataset.amount];
       el.textContent = a ? `${Money.local(a.amount)} of ${Money.local(state.cash)}` : "";
+    }
+
+    const shares = sharesLine(p);
+    $("#pay-shares").hidden = !shares;
+    $("#pay-shares").textContent = shares;
+    $("#pay-shares").classList.toggle("short", p.sharesShare > 1);
+    for (const el of $$("#p-shares [data-amount]")) {
+      const a = p.shares[+el.dataset.amount];
+      el.textContent = a ? `${Money.local(a.amount)} of ${Money.local(p.afterBack)} left after back pay` : "";
     }
 
     $("#pay-owed").textContent = h.owed;
@@ -361,6 +402,7 @@
         <td><strong>${fmtLongMonth(m.i)}</strong><br><span class="small">${notes.join(" · ")}</span></td>
         <td>${cell(m.salary)}</td>
         <td>${cell(m.backPay)}</td>
+        <td>${cell(m.share)}</td>
         <td>${cell(m.costs)}</td>
         <td><span class="big left">${Money.local(m.left)}</span></td>
       </tr>`;
@@ -374,14 +416,26 @@
   // Amounts travel with their currency and rate, so a link opened in another
   // currency converts them rather than reading euros as dollars. v2 adds the
   // savings rows as label, percentage pairs, labels URI-encoded so commas are
-  // safe. Where cash came from stays in this browser: a link carries the amount.
+  // safe. v3 puts the number of savings rows first, then the shares after back
+  // pay follow them. Where cash came from stays in this browser: a link carries
+  // the amount.
   const KEY = "pay-yourself";
   const SOURCE_KEY = "pay-yourself.source";
-  const serialize = () => ["pay", "v2", ...KEYS.map((k) => state[k]), state.code, state.rate,
-    ...state.savings.flatMap((sv) => [encodeURIComponent(sv.label), sv.pct])].join(",");
+  const pairs = (rows) => rows.flatMap((r) => [encodeURIComponent(r.label), r.pct]);
+  const serialize = () => ["pay", "v3", ...KEYS.map((k) => state[k]), state.code, state.rate,
+    state.savings.length, ...pairs(state.savings), ...pairs(state.shares)].join(",");
+  function readPairs(vals) {
+    const rows = [];
+    for (let i = 0; i + 1 < vals.length && rows.length < MAX_ROWS; i += 2) {
+      let label = "";
+      try { label = decodeURIComponent(vals[i]); } catch { /* malformed: leave it blank */ }
+      rows.push(cleanRow(label, vals[i + 1]));
+    }
+    return rows;
+  }
   function apply(str) {
     const p = String(str).split(",");
-    if (p[0] !== "pay" || (p[1] !== "v1" && p[1] !== "v2")) return false;
+    if (p[0] !== "pay" || !["v1", "v2", "v3"].includes(p[1])) return false;
     const vals = p.slice(2);
     const code = vals[KEYS.length], rate = parseFloat(vals[KEYS.length + 1]);
     // Same currency: take the amounts as typed, whatever the rate has done since.
@@ -391,14 +445,15 @@
       if (!Number.isFinite(x)) return;
       setValue(k, FIELDS[k].money && convert ? x * Money.rate() / rate : x);
     });
-    const rows = vals.slice(KEYS.length + 2);
-    state.savings = [];
-    for (let i = 0; i + 1 < rows.length && state.savings.length < MAX_SAVINGS; i += 2) {
-      let label = "";
-      try { label = decodeURIComponent(rows[i]); } catch { /* malformed: leave it blank */ }
-      state.savings.push(cleanSaving(label, rows[i + 1]));
+    let rows = vals.slice(KEYS.length + 2), nSavings = Infinity;
+    if (p[1] === "v3") {
+      nSavings = clamp(Math.floor(num(rows[0])), 0, MAX_ROWS);
+      rows = rows.slice(1);
     }
+    state.savings = readPairs(rows.slice(0, nSavings * 2));
+    state.shares = readPairs(rows.slice(nSavings * 2));
     renderSavings();
+    renderShares();
     return true;
   }
   function save() {
@@ -416,8 +471,10 @@
         `${plural(s.worked, "month")} unpaid at ${Money.local(s.backPer)} · ` +
         `back pay over ${plural(s.spread, "month")} · ${Money.local(s.salary)} salary and ${Money.local(s.costs)} other costs a month`,
       ...p.aside.map((a) => `Set aside for ${a.label.trim() || "savings"}: ${fmtPct(a.pct / 100)}, ${Money.local(a.amount)}`),
+      ...p.shares.map((a) => `After back pay, for ${a.label.trim() || "a share"}: ${fmtPct(a.pct / 100)}, ${Money.local(a.amount)}`),
       "",
       ...(p.aside.length ? [asideLine(p)] : []),
+      ...(p.shares.length ? [sharesLine(p)] : []),
       `${h.owed} ${h.rest}`,
       "",
       "A cash plan, not tax or financial advice.",

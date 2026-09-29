@@ -12,7 +12,7 @@
 <meta name="theme-color" content="#111111" media="(prefers-color-scheme: dark)" />
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%23111111'/%3E%3Crect x='6' y='18' width='5' height='8' fill='%23EADDCA'/%3E%3Crect x='13.5' y='13' width='5' height='13' fill='%23EADDCA'/%3E%3Crect x='21' y='6' width='5' height='20' fill='%23C7352A'/%3E%3C/svg%3E" />
 <link rel="preload" href="assets/archivo.woff2" as="font" type="font/woff2" crossorigin />
-<link rel="stylesheet" href="assets/style.css?v=3.14" />
+<link rel="stylesheet" href="assets/style.css?v=3.15" />
 
 <meta property="og:type" content="website" />
 <meta property="og:title" content="Steam Launch Planner" />
@@ -570,6 +570,13 @@
         </fieldset>
 
         <fieldset>
+          <legend>After back pay</legend>
+          <p class="tip savings-help">A share of the cash left once back pay is paid off, paid out that month: a bonus, a partner's share, reinvesting.</p>
+          <div class="savings" id="p-shares"></div>
+          <div><button class="btn" type="button" id="p-add-share">Add share</button></div>
+        </fieldset>
+
+        <fieldset>
           <legend>From now on</legend>
           <div class="field">
             <label for="p-salary">Monthly salary from now</label>
@@ -597,12 +604,14 @@
         </div>
         <p class="pay-line"><span id="pay-owed"></span> <span id="pay-rest"></span></p>
         <p class="mid-line" id="pay-aside" hidden></p>
+        <p class="mid-line" id="pay-shares" hidden></p>
 
         <div class="chart-box pay-chart"><canvas id="pay-chart" role="img"></canvas></div>
         <div class="legend">
           <span><i class="sw unpaid"></i>Unpaid work</span>
           <span><i class="sw cut"></i>Salary</span>
           <span><i class="sw take"></i>Back pay</span>
+          <span><i class="sw share"></i>After back pay</span>
           <span><i class="sw costs"></i>Other costs</span>
           <span><i class="sw cash"></i>Cash left (right axis)</span>
           <span><i class="sw mid"></i>Below zero</span>
@@ -629,11 +638,12 @@
           <th scope="col">Month</th>
           <th scope="col">Salary <span class="th-cur"></span></th>
           <th scope="col">Back pay <span class="th-cur"></span></th>
+          <th scope="col">After back pay <span class="th-cur"></span></th>
           <th scope="col">Other costs <span class="th-cur"></span></th>
           <th scope="col">Cash left <span class="th-cur"></span></th>
         </tr></thead>
         <tbody>
-          <tr class="group"><th colspan="5">Month by month <span>cash left is after that month's payments</span></th></tr>
+          <tr class="group"><th colspan="6">Month by month <span>cash left is after that month's payments</span></th></tr>
         </tbody>
         <tbody id="pay-rows"></tbody>
       </table>
@@ -659,11 +669,15 @@
         <li><b>Each back pay payment</b>
           <code>back pay owed ÷ months to spread it over</code>
           <span>Paid this month and each month after it until it's all paid.</span></li>
+        <li><b>Paid out after back pay</b>
+          <code>cash left after the last back pay payment × each share percentage</code>
+          <span>Paid the month back pay is finished, after that month's salary and costs, or
+            this month when no back pay is owed. Shares can't add up to more than what's left.</span></li>
         <li><b>Cash left at the end of each month</b>
-          <code>cash left − salary − other costs − back pay payment</code>
+          <code>cash left − salary − other costs − back pay payment − shares paid out</code>
           <span>The first month it goes below zero is when your cash runs out.</span></li>
         <li><b>How long it lasts</b>
-          <code>(cash for the plan − back pay owed) ÷ (salary + other costs)</code>
+          <code>(cash for the plan − back pay owed − shares paid out) ÷ (salary + other costs)</code>
           <span>Shown when the cash still lasts past the months ahead.</span></li>
       </ol>
 
@@ -683,16 +697,16 @@
 
   <footer class="colophon">
     <!-- bump this on every change that alters the numbers or the inputs, and the ?v= on the asset links in the head and at the end so browsers fetch the new files -->
-    <span>Steam Launch Planner <span class="ver" id="ver">v3.14</span> · Sep 2026</span>
+    <span>Steam Launch Planner <span class="ver" id="ver">v3.15</span> · Sep 2026</span>
   </footer>
 
 </div>
 
-<script src="assets/chart.umd.min.js?v=3.14"></script>
-<script src="assets/common.js?v=3.14"></script>
-<script src="assets/estimate.js?v=3.14"></script>
-<script src="assets/track.js?v=3.14"></script>
-<script src="assets/pay.js?v=3.14"></script>
-<script src="assets/boot.js?v=3.14"></script>
+<script src="assets/chart.umd.min.js?v=3.15"></script>
+<script src="assets/common.js?v=3.15"></script>
+<script src="assets/estimate.js?v=3.15"></script>
+<script src="assets/track.js?v=3.15"></script>
+<script src="assets/pay.js?v=3.15"></script>
+<script src="assets/boot.js?v=3.15"></script>
 </body>
 </html>

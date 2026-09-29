@@ -209,6 +209,7 @@ h1 {
 .sw.tax    { background: var(--bar-tax); background-image: repeating-linear-gradient(135deg, var(--line) 0 3px, transparent 3px 7px); }
 .sw.take   { background: var(--accent); }
 .sw.unpaid { background: color-mix(in srgb, var(--accent) 22%, transparent); border: 1px solid var(--accent); }
+.sw.share  { background: color-mix(in srgb, var(--accent) 50%, transparent); }
 .sw.costs  { background: var(--bar-tax); }
 .sw.cash   { height: 0; border-top: 2px solid var(--ink); }
 
