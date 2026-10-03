@@ -141,12 +141,41 @@ h1 {
 .tab:hover { color: var(--ink); }
 .tab[aria-selected="true"] { background: var(--ink); color: var(--bg); }
 
-.money { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; font-size: 13.5px; color: var(--muted); }
-.money select, .money input { border: 1px solid var(--line); background: var(--field); padding: 5px 8px; height: 34px; }
-.money select { max-width: 210px; }
-.money .seg button { padding: 0 10px; height: 32px; }
-.money input { width: 104px; text-align: right; }
-.money .hint { font-size: 12px; }
+/* stays right-aligned when the bar wraps, so its menu always opens over the page */
+.money { margin-left: auto; }
+.money > summary { display: flex; align-items: center; gap: 6px; height: 36px; }
+.money-k { color: var(--faint); }
+/* every code is three letters; a fixed width keeps the button the same size whatever is picked */
+.money-code { display: inline-block; width: 2.6em; font-weight: 700; color: var(--ink); font-variant-numeric: tabular-nums; }
+.dropdown .money-menu { width: 280px; gap: 6px; }
+.cur-list { display: grid; }
+.cur-all { max-height: 240px; overflow-y: auto; border: 1px solid var(--line); }
+.cur-opt {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  width: 100%;
+  border: 0;
+  background: transparent;
+  padding: 6px 8px;
+  text-align: left;
+  font-size: 13.5px;
+  color: var(--muted);
+  cursor: pointer;
+}
+.cur-opt b { min-width: 3.2ch; color: var(--ink); }
+.cur-opt:hover { background: var(--field); color: var(--ink); }
+.cur-opt[aria-pressed="true"] { background: var(--ink); color: var(--bg); }
+.cur-opt[aria-pressed="true"] b { color: var(--bg); }
+#cur-recent-wrap { display: grid; gap: 6px; margin-bottom: 4px; }
+#cur-recent-wrap[hidden] { display: none; }
+.rate-box { display: grid; gap: 6px; margin-top: 6px; padding-top: 10px; border-top: 1px solid var(--line); }
+.rate-box[hidden] { display: none; }
+.rate-row { display: flex; align-items: center; gap: 8px; font-size: 13.5px; color: var(--muted); }
+.rate-row input { width: 110px; height: 34px; border: 1px solid var(--line); background: var(--field); padding: 5px 8px; text-align: right; }
+.rate-foot { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.rate-foot .hint { font-size: 12px; }
+.rate-foot .btn-quiet { padding: 4px 0; white-space: nowrap; }
 
 /* ── shared controls ────────────────────────────────────────────────── */
 .btn {

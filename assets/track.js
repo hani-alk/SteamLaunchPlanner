@@ -1298,15 +1298,6 @@
     if (activeId && state.settings.lastDayPartial && state.settings.lastDayHoursManual === "") recompute();
   }, 5 * 60 * 1000);
 
-  // Dropdowns close on a click outside them or on Escape.
-  document.addEventListener("click", (e) => {
-    for (const d of $$("details.dropdown[open]")) if (!d.contains(e.target)) d.open = false;
-  });
-  document.addEventListener("keydown", (e) => {
-    if (e.key !== "Escape") return;
-    for (const d of $$("details.dropdown[open]")) { d.open = false; d.querySelector("summary").focus(); }
-  });
-
   for (const tab of $$(".sec-tab")) {
     tab.addEventListener("click", () => openPanel(tab.dataset.panel));
     tab.addEventListener("keydown", (e) => {

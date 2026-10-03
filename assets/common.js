@@ -156,19 +156,30 @@ const Money = (() => {
   };
 })();
 
-// The currency bar in the page header.
+// Dropdowns close on a click outside them or on Escape.
+document.addEventListener("click", (e) => {
+  for (const d of $$("details.dropdown[open]")) if (!d.contains(e.target)) d.open = false;
+});
+document.addEventListener("keydown", (e) => {
+  if (e.key !== "Escape") return;
+  for (const d of $$("details.dropdown[open]")) { d.open = false; d.querySelector("summary").focus(); }
+});
+
+// The currency menu in the page header.
 (() => {
-  const sel = $("#cur"), rateIn = $("#rate"), rateWrap = $("#rate-wrap"), status = $("#rates-status"), quick = $("#cur-quick");
-  sel.innerHTML = CURRENCIES.map((c) => `<option value="${c.code}">${c.code} · ${c.name}</option>`).join("");
+  const menu = $("#curMenu"), rateIn = $("#rate"), rateWrap = $("#rate-wrap"), status = $("#rates-status");
+  const option = (c, current) =>
+    `<button type="button" class="cur-opt" data-cur="${c.code}" aria-pressed="${c.code === current}"><b>${c.code}</b><span>${c.name}</span></button>`;
 
   function paint() {
     const info = Money.info();
-    sel.value = info.code;
-    // Recent currencies in list order, so the buttons don't shuffle under the pointer.
+    $("#cur-label").textContent = info.code;
+    menu.querySelector("summary").title = info.name;
+    // Recent currencies in list order, so they don't shuffle when one is picked.
     const recent = CURRENCIES.filter((c) => Money.recent.includes(c.code));
-    quick.hidden = recent.length < 2;
-    quick.innerHTML = recent.map((c) =>
-      `<button type="button" data-cur="${c.code}" aria-pressed="${c.code === info.code}" title="${c.name}">${c.code}</button>`).join("");
+    $("#cur-recent-wrap").hidden = recent.length < 2;
+    $("#cur-recent").innerHTML = recent.map((c) => option(c, info.code)).join("");
+    $("#cur-all").innerHTML = CURRENCIES.map((c) => option(c, info.code)).join("");
     rateWrap.hidden = info.code === "USD";
     $("#rate-code").textContent = info.code;
     if (document.activeElement !== rateIn) rateIn.value = Money.rate();
@@ -199,10 +210,17 @@ const Money = (() => {
     Money.setCode(c);
     if (Money.stale()) fetchRates();
   }
-  sel.addEventListener("change", () => pick(sel.value));
-  quick.addEventListener("click", (e) => {
+  // Picking closes the menu; the rate stays a click away for anyone who wants to set it.
+  menu.addEventListener("click", (e) => {
     const b = e.target.closest("[data-cur]");
-    if (b) { pick(b.dataset.cur); quick.querySelector(`[data-cur="${b.dataset.cur}"]`).focus(); }
+    if (!b) return;
+    pick(b.dataset.cur);
+    menu.open = false;
+    menu.querySelector("summary").focus();
+  });
+  // Opening scrolls the current currency into view in the long list.
+  menu.addEventListener("toggle", () => {
+    if (menu.open) $("#cur-all [aria-pressed='true']")?.scrollIntoView({ block: "nearest" });
   });
   rateIn.addEventListener("input", () => { const r = parseFloat(rateIn.value); if (r > 0) Money.setRate(r); });
   rateIn.addEventListener("change", paint);

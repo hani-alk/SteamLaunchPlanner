@@ -12,7 +12,7 @@
 <meta name="theme-color" content="#111111" media="(prefers-color-scheme: dark)" />
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%23111111'/%3E%3Crect x='6' y='18' width='5' height='8' fill='%23EADDCA'/%3E%3Crect x='13.5' y='13' width='5' height='13' fill='%23EADDCA'/%3E%3Crect x='21' y='6' width='5' height='20' fill='%23C7352A'/%3E%3C/svg%3E" />
 <link rel="preload" href="assets/archivo.woff2" as="font" type="font/woff2" crossorigin />
-<link rel="stylesheet" href="assets/style.css?v=3.15" />
+<link rel="stylesheet" href="assets/style.css?v=3.16" />
 
 <meta property="og:type" content="website" />
 <meta property="og:title" content="Steam Launch Planner" />
@@ -33,14 +33,26 @@
       <button class="tab" role="tab" id="tab-track" data-view="track" aria-controls="view-track" aria-selected="false" tabindex="-1">After launch</button>
       <button class="tab" role="tab" id="tab-pay" data-view="pay" aria-controls="view-pay" aria-selected="false" tabindex="-1">Pay yourself</button>
     </div>
-    <div class="money">
-      <label for="cur">Money in</label>
-      <div class="seg" id="cur-quick" role="group" aria-label="Recent currencies" hidden></div>
-      <select id="cur"></select>
-      <span id="rate-wrap" hidden>1 USD = <input id="rate" type="number" min="0" step="any" inputmode="decimal" aria-label="Exchange rate" /> <span id="rate-code"></span></span>
-      <button class="btn-quiet" type="button" id="rates-update">Update rates</button>
-      <span class="hint" id="rates-status"></span>
-    </div>
+    <!-- One fixed-size button; the list and the rate float over the page so nothing shifts. -->
+    <details class="dropdown money" id="curMenu">
+      <summary><span class="money-k">Money in</span> <span class="money-code" id="cur-label">USD</span></summary>
+      <div class="menu money-menu">
+        <div id="cur-recent-wrap" hidden>
+          <div class="menu-label">Recent</div>
+          <div class="cur-list" id="cur-recent" role="group" aria-label="Recent currencies"></div>
+        </div>
+        <div class="menu-label">All currencies</div>
+        <div class="cur-list cur-all" id="cur-all" role="group" aria-label="All currencies"></div>
+        <div class="rate-box" id="rate-wrap" hidden>
+          <label class="menu-label" for="rate">Exchange rate</label>
+          <div class="rate-row">1 USD = <input id="rate" type="number" min="0" step="any" inputmode="decimal" /> <span id="rate-code"></span></div>
+          <div class="rate-foot">
+            <span class="hint" id="rates-status"></span>
+            <button class="btn-quiet" type="button" id="rates-update">Update rates</button>
+          </div>
+        </div>
+      </div>
+    </details>
   </nav>
 
   <!-- ════════════════════ Before launch ════════════════════ -->
@@ -702,11 +714,11 @@
 
 </div>
 
-<script src="assets/chart.umd.min.js?v=3.15"></script>
-<script src="assets/common.js?v=3.15"></script>
-<script src="assets/estimate.js?v=3.15"></script>
-<script src="assets/track.js?v=3.15"></script>
-<script src="assets/pay.js?v=3.15"></script>
-<script src="assets/boot.js?v=3.15"></script>
+<script src="assets/chart.umd.min.js?v=3.16"></script>
+<script src="assets/common.js?v=3.16"></script>
+<script src="assets/estimate.js?v=3.16"></script>
+<script src="assets/track.js?v=3.16"></script>
+<script src="assets/pay.js?v=3.16"></script>
+<script src="assets/boot.js?v=3.16"></script>
 </body>
 </html>
