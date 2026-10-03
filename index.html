@@ -394,31 +394,31 @@
           <button type="button" class="sec-tab" role="tab" id="stab-data" data-panel="data" aria-controls="spanel-data">Forecast and data</button>
         </div>
         <div class="sec-panel totals-wrap" id="spanel-totals" role="tabpanel" aria-labelledby="stab-totals" hidden>
-          <div class="totals-top">
-            <div class="totals-split" id="totalsSplit" hidden>
-              <div class="eyebrow">Where logged sales go</div>
-              <div class="split" id="t-split" role="img">
-                <span class="seg-cut" id="t-seg-cut"></span>
-                <span class="seg-tax" id="t-seg-tax"></span>
-                <span class="seg-take" id="t-seg-take"></span>
-              </div>
-              <div class="legend">
-                <span><i class="sw cut"></i><span id="tl-cut">Steam</span></span>
-                <span><i class="sw tax"></i><span id="tl-tax">Withheld</span></span>
-                <span><i class="sw take"></i><span id="tl-take">You</span></span>
-              </div>
-            </div>
-            <div class="totals-head">
-              <div class="seg" id="totalsSeg" role="group" aria-label="Totals by">
-                <button type="button" data-value="milestones">Milestones</button>
-                <button type="button" data-value="months">Month by month</button>
-              </div>
+          <div class="payouts" id="payouts" hidden></div>
+          <div class="totals-bar">
+            <div class="eyebrow" id="totalsTitle"></div>
+            <div class="seg" id="totalsSeg" role="group" aria-label="Totals by">
+              <button type="button" data-value="months">Month by month</button>
+              <button type="button" data-value="milestones">Milestones</button>
             </div>
           </div>
           <table class="totals">
-            <thead><tr><th>Period</th><th>Copies</th><th id="thNet">Steam net</th><th id="thPayout">Your payout</th></tr></thead>
+            <thead id="totalsHead"></thead>
             <tbody id="totals"></tbody>
           </table>
+          <div class="totals-split" id="totalsSplit" hidden>
+            <div class="eyebrow">Where logged sales go</div>
+            <div class="split" id="t-split" role="img">
+              <span class="seg-cut" id="t-seg-cut"></span>
+              <span class="seg-tax" id="t-seg-tax"></span>
+              <span class="seg-take" id="t-seg-take"></span>
+            </div>
+            <div class="legend">
+              <span><i class="sw cut"></i><span id="tl-cut">Steam</span></span>
+              <span><i class="sw tax"></i><span id="tl-tax">Withheld</span></span>
+              <span><i class="sw take"></i><span id="tl-take">You</span></span>
+            </div>
+          </div>
         </div>
         <div class="sec-panel block" id="spanel-log" role="tabpanel" aria-labelledby="stab-log" hidden>
           <div class="block-head">

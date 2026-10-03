@@ -24,7 +24,7 @@
     reviews: { positive: 0, negative: 0 },
     plannedSales: [],
     chartPrefs: {
-      metric: "units", view: "daily", scale: "linear", preset: "30", totals: "milestones", panel: "totals",
+      metric: "units", view: "daily", scale: "linear", preset: "30", totalsBy: "months", panel: "totals",
       series: { actual: true, forecast: true, range: true, average: false, periods: true, now: true },
     },
   };
@@ -85,7 +85,7 @@
   const isObj = (v) => v != null && typeof v === "object" && !Array.isArray(v);
   const CHART_CHOICES = {
     metric: ["units", "net", "payout"], view: ["daily", "cumulative"], scale: ["linear", "log"],
-    preset: FRAME_PRESETS, totals: ["milestones", "months"],
+    preset: FRAME_PRESETS, totalsBy: ["months", "milestones"],
     panel: ["totals", "log", "discounts", "money", "audience", "data"],
   };
 
@@ -455,7 +455,7 @@
     }
   }
 
-  const SEGMENTS = { metricSeg: "metric", viewSeg: "view", scaleSeg: "scale", presetSeg: "preset", totalsSeg: "totals" };
+  const SEGMENTS = { metricSeg: "metric", viewSeg: "view", scaleSeg: "scale", presetSeg: "preset", totalsSeg: "totalsBy" };
   function renderSegments() {
     for (const [id, key] of Object.entries(SEGMENTS)) {
       for (const b of $$(`#${id} button`)) {
@@ -515,8 +515,6 @@
     const model = buildModel();
     renderReviews(model);
     renderSegments();
-    $("#thNet").textContent = `Steam net (${Money.code})`;
-    $("#thPayout").textContent = `Your payout (${Money.code})`;
     $("#refHint").textContent = model && model.refundsLogged ? `Using ${fmtPct(model.refundRate)} from your log` : "Used until you log refunds";
     $("#f-ref").disabled = !!(model && model.refundsLogged);
 
@@ -525,6 +523,9 @@
       $("#chartEmpty").textContent = "Add your first day of sales below, or import a Steamworks CSV.";
       $("#notes").innerHTML = "";
       $("#frameSummary").textContent = "";
+      $("#payouts").hidden = true;
+      $("#totalsTitle").textContent = "";
+      $("#totalsHead").innerHTML = "";
       $("#totals").innerHTML = `<tr><td colspan="4" style="color:var(--muted)">Totals appear once you log a day of sales.</td></tr>`;
       $("#totalsSplit").hidden = true;
       $("#moneyReadout").innerHTML = "";
@@ -556,8 +557,91 @@
   }
 
   function renderTotals(model, projections) {
-    const n = model.n;
     const loggedMoney = model.calibrated ? (v) => Money.exact(v) : (v) => Money.rough(v);
+    const months = monthPayouts(model, projections);
+    // Money already earned is shown to the dollar; without Steamworks net it rests on the price estimate.
+    const sureMoney = (v) => Money.exact(v);
+    const estimateNote = model.calibrated ? "" : "Logged days use your price estimate until you add Steamworks net.";
+    renderPayouts(months, sureMoney, estimateNote);
+    const byMonth = state.chartPrefs.totalsBy === "months";
+    $("#spanel-totals table").classList.toggle("by-month", byMonth);
+    if (byMonth) renderMonthTable(months, sureMoney);
+    else renderMilestones(model, projections, loggedMoney);
+    renderSplit(periodTotals(projections.mid, 0, model.n - 1, false).net, loggedMoney);
+  }
+
+  // Each calendar month split into what's logged, money already earned, and what the
+  // forecast adds for the days not logged yet.
+  function monthPayouts(model, projections) {
+    const n = model.n, today = todayISO();
+    return monthSpans(model).map((m) => {
+      const hasLogged = m.from <= n - 1;
+      const loggedTo = Math.min(m.to, n - 1);
+      const open = m.to > n - 1 || (m.to === n - 1 && !!state.settings.lastDayPartial);
+      return {
+        ...m, open,
+        sure: hasLogged ? periodTotals(projections.mid, m.from, loggedTo, false) : { units: 0, net: 0, payout: 0 },
+        total: open ? allCases(projections, m.from, m.to, hasLogged && n - 1 <= m.to) : null,
+        copies: hasLogged ? sum(model.actual.slice(m.from, loggedTo + 1)) : 0,
+        daysLogged: Math.max(0, loggedTo - m.from + 1),
+        days: m.to - m.from + 1,
+        paid: m.payday < today,
+      };
+    });
+  }
+  const daysNote = (m) => !m.daysLogged ? "nothing logged yet"
+    : m.open ? `${m.daysLogged} of ${m.days} days logged` : `all ${m.days} days logged`;
+  const stillToCome = (m, k) => m.total[k].payout - m.sure.payout;
+
+  // The next two paydays come first: what's already earned for each, then the forecast on top.
+  function renderPayouts(months, money, estimateNote) {
+    const next = months.filter((m) => !m.paid).slice(0, 2);
+    $("#payouts").hidden = !next.length;
+    $("#payouts").innerHTML = next.map((m, i) => {
+      const left = m.days - m.daysLogged;
+      const more = m.open
+        ? `<p class="payout-more">+${Money.range(stillToCome(m, "low"), stillToCome(m, "high"))} forecast${left ? ` for the ${left === 1 ? "day" : `${left} days`} not logged yet` : " for the rest of today"}<span>About ${Money.rough(m.total.mid.payout)} in all</span></p>`
+        : `<p class="payout-more final">Final: every day of ${m.month} is logged.</p>`;
+      return `<div class="payout${i ? "" : " next"}">
+        <div class="eyebrow">${i ? "After that" : "Next payout"} · around ${fmtDate(m.payday)}</div>
+        <div class="payout-sure"><span class="payout-amount">${money(m.sure.payout)}</span> guaranteed${m.open ? " so far" : ""}</div>
+        ${more}
+        <p class="payout-for">For ${m.label}${m.fromLaunch ? " from launch" : ""} · ${daysNote(m)}</p>
+      </div>`;
+    }).join("") + (estimateNote ? `<p class="payouts-note">${estimateNote}</p>` : "");
+  }
+
+  function renderMonthTable(months, money) {
+    $("#totalsTitle").textContent = `Your payout by month (${Money.code})`;
+    $("#totalsHead").innerHTML = `<tr><th>Month</th><th>Guaranteed</th><th>Expected</th></tr>`;
+    const row = (m, isNext) => {
+      const notes = [`${m.paid ? "Paid" : "Pays"} around ${fmtDate(m.payday)}`, daysNote(m)];
+      if (m.fromLaunch) notes.unshift("From launch");
+      const sure = m.daysLogged
+        ? `<span class="big">${money(m.sure.payout)}</span><span class="small">${fmtInt(m.copies)} copies</span>`
+        : `<span class="big nil">—</span>`;
+      // A month with days logged shows what the forecast adds; one with none is all forecast.
+      const expected = !m.open ? `<span class="big">${money(m.sure.payout)}</span><span class="small">final</span>`
+        : `<span class="big">${Money.range(m.total.low.payout, m.total.high.payout)}</span><span class="small">${m.daysLogged
+          ? `+${Money.range(stillToCome(m, "low"), stillToCome(m, "high"))} still to come`
+          : `mid ${Money.rough(m.total.mid.payout)}`}</span>`;
+      return `<tr class="${[m.paid && "paid", isNext && "next", m.open && "open"].filter(Boolean).join(" ")}">
+        <td><strong>${m.label}</strong><br><span class="small">${notes.join(" · ")}</span></td>
+        <td>${sure}</td><td class="expected">${expected}</td>
+      </tr>`;
+    };
+    const group = (title, note) => `<tr class="group"><th colspan="3">${title} <span>${note}</span></th></tr>`;
+    const upcoming = months.filter((m) => !m.paid);
+    const paid = months.filter((m) => m.paid).reverse();
+    $("#totals").innerHTML =
+      (upcoming.length ? group("Coming up", "guaranteed is what your logged days have earned; the rest is forecast") + upcoming.map((m, i) => row(m, i === 0)).join("") : "") +
+      (paid.length ? group("Already paid", "most recent first") + paid.map((m) => row(m, false)).join("") : "");
+  }
+
+  function renderMilestones(model, projections, loggedMoney) {
+    const n = model.n;
+    $("#totalsTitle").textContent = "Totals since launch";
+    $("#totalsHead").innerHTML = `<tr><th>Period</th><th>Copies</th><th>Steam net (${Money.code})</th><th>Your payout (${Money.code})</th></tr>`;
     const launchTo = (i, fmt) => `${fmtDate(model.launch)} to ${fmt(addDaysISO(model.launch, i))}`;
     // A span still has forecast in it if it runs past the log, or ends on a day that's in progress.
     const spanRow = (label, from, to, fmt) => {
@@ -604,11 +688,8 @@
         <td><span class="big">${p}${Money.range(t.low.payout, t.high.payout)}</span><span class="small">mid ${p}${Money.rough(t.mid.payout)}</span></td>
       </tr>`;
     };
-    $("#totals").innerHTML = state.chartPrefs.totals === "months"
-      ? group("Each month on its own", "not running totals; Steam pays each month about 30 days after it ends") + monthRows(model).map(renderRow).join("")
-      : group("Running totals", "since launch, logged days included") + running.map(renderRow).join("") +
-        group("Upcoming only", "days after the last logged one, not added to the above") + ahead.map((r) => renderRow({ ...r, added: true })).join("");
-    renderSplit(periodTotals(projections.mid, 0, n - 1, false).net, loggedMoney);
+    $("#totals").innerHTML = group("Running totals", "since launch, logged days included") + running.map(renderRow).join("") +
+      group("Upcoming only", "days after the last logged one, not added to the above") + ahead.map((r) => renderRow({ ...r, added: true })).join("");
   }
 
   // Where logged Steam net goes, the same split the estimator draws before launch.
@@ -629,12 +710,11 @@
   }
 
   // Calendar months from launch: the whole first year, and at least six months past today.
-  function monthRows(model) {
-    const n = model.n;
-    const lastIdx = Math.max(MAX_DAYS, n) - 1;
+  function monthSpans(model) {
+    const lastIdx = Math.max(MAX_DAYS, model.n) - 1;
     const today = todayISO();
     const stop = [addDaysISO(model.launch, 364), addDaysISO(model.lastDate > today ? model.lastDate : today, 183)].sort()[1];
-    const rows = [];
+    const spans = [];
     let [y, m] = model.launch.split("-").map(Number);
     for (;;) {
       const start = new Date(Date.UTC(y, m - 1, 1)).toISOString().slice(0, 10);
@@ -642,19 +722,13 @@
       const to = daysBetween(model.launch, end);
       if (start > stop || to > lastIdx) break;
       const from = Math.max(0, daysBetween(model.launch, start));
-      const holdsLastDay = from <= n - 1 && n - 1 <= to;
-      const forecast = to > n - 1 || (to === n - 1 && !!state.settings.lastDayPartial);
       const monthName = new Date(start + "T00:00:00Z").toLocaleString("en-US", { month: "long", timeZone: "UTC" });
       // Valve pays around the 30th of the following month (the 28th or 29th in February).
       const payday = new Date(Date.UTC(y, m, Math.min(30, new Date(Date.UTC(y, m + 1, 0)).getUTCDate()))).toISOString().slice(0, 10);
-      const notes = [];
-      if (from === 0 && start !== model.launch) notes.push(`From ${fmtDate(model.launch)}`);
-      if (forecast && holdsLastDay) notes.push(`${n - from} of ${to - from + 1} days logged`);
-      notes.push(`Paid around ${fmtDate(payday)}`);
-      rows.push({ label: `${monthName} ${y}`, sub: notes.join(" · "), from, to, rem: forecast && holdsLastDay, forecast });
+      spans.push({ label: `${monthName} ${y}`, month: monthName, from, to, payday, fromLaunch: from === 0 && start !== model.launch });
       if (++m > 12) { m = 1; y++; }
     }
-    return rows;
+    return spans;
   }
 
   function renderHoursHint(model) {
