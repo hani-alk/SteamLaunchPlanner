@@ -25,6 +25,8 @@
   --bar-cut:   rgba(17,17,17,0.72);
   --bar-tax:   rgba(17,17,17,0.34);
   --veil:      rgba(234,221,202,0.94);
+  /* height of the sticky top bar, kept current by common.js; things that stick sit under it */
+  --bar-h:     58px;
   color-scheme: light;
 }
 @media (prefers-color-scheme: dark) {
@@ -119,14 +121,22 @@ h1 {
 
 /* ── tabs + currency ────────────────────────────────────────────────── */
 .appbar {
+  position: sticky;
+  top: 0;
+  z-index: 30;
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: 10px 20px;
-  padding: 10px 0;
+  /* runs out to the page gutters so content doesn't show beside it as it scrolls under */
+  margin: 0 -20px;
+  padding: 10px 20px;
+  background: var(--veil);
+  backdrop-filter: blur(8px);
   border-bottom: 1px solid var(--line);
 }
+html { scroll-padding-top: calc(var(--bar-h) + 12px); }
 .tabs { display: flex; gap: 0; border: 1px solid var(--line); }
 .tab {
   border: 0;
@@ -147,7 +157,7 @@ h1 {
 .money-k { color: var(--faint); }
 /* every code is three letters; a fixed width keeps the button the same size whatever is picked */
 .money-code { display: inline-block; width: 2.6em; font-weight: 700; color: var(--ink); font-variant-numeric: tabular-nums; }
-.dropdown .money-menu { width: 280px; gap: 6px; }
+.dropdown .money-menu { width: 280px; gap: 6px; max-height: calc(100vh - var(--bar-h) - 16px); overflow-y: auto; }
 .cur-list { display: grid; }
 .cur-all { max-height: 240px; overflow-y: auto; border: 1px solid var(--line); }
 .cur-opt {
@@ -308,7 +318,7 @@ h1 {
 .ticker {
   display: none;
   position: sticky;
-  top: 0;
+  top: var(--bar-h);
   z-index: 5;
   align-items: baseline;
   justify-content: space-between;
@@ -418,7 +428,7 @@ select.full { width: 100%; min-width: 0; height: 36px; border: 1px solid var(--l
 /* results */
 .result {
   position: sticky;
-  top: 20px;
+  top: calc(var(--bar-h) + 20px);
   border-top: 3px solid var(--accent);
   padding: 20px 22px;
 }
@@ -685,6 +695,7 @@ table.log { width: 100%; border-collapse: collapse; min-width: 480px; }
 /* ── narrow screens ─────────────────────────────────────────────────── */
 @media (max-width: 880px) {
   .wrap { padding: 20px 16px 44px; }
+  .appbar { margin: 0 -16px; padding: 8px 16px; }
   .cols { grid-template-columns: 1fr; gap: 28px; padding-top: 20px; }
   .result { position: static; padding: 18px 16px; margin: 0 -16px; border-left: 0; border-right: 0; }
   .ticker { display: flex; }
@@ -710,8 +721,12 @@ table.log { width: 100%; border-collapse: collapse; min-width: 480px; }
   .num.amount { width: 150px; }
   .pay-chart { height: 240px; }
   .est-chart { height: 200px; }
-  .tabs { width: 100%; }
-  .tab { flex: 1; padding: 9px 6px; font-size: 14px; }
+  /* tabs and currency share one row, so the sticky bar stays short */
+  .appbar { flex-wrap: nowrap; gap: 8px; }
+  .tabs { flex: 1; min-width: 0; }
+  .tab { flex: 1; padding: 9px 4px; font-size: 13px; font-stretch: 80%; white-space: nowrap; }
+  .money-k { display: none; }
+  .money > summary { padding: 6px 8px; }
 }
 
 @media (prefers-reduced-motion: reduce) {

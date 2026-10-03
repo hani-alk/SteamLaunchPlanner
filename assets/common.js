@@ -229,6 +229,12 @@ document.addEventListener("keydown", (e) => {
   paint();
 })();
 
+// The top bar sticks, and its height changes as it wraps; anything that sticks below it reads --bar-h.
+(() => {
+  const bar = $(".appbar");
+  new ResizeObserver(() => document.documentElement.style.setProperty("--bar-h", bar.getBoundingClientRect().height + "px")).observe(bar);
+})();
+
 // ── chart colours come from the CSS tokens, so both themes match ──
 function cssVar(name) {
   return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
