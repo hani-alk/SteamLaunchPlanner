@@ -16,7 +16,7 @@
     gameName: "My game",
     days: [],
     settings: {
-      price: 9.99, launchDiscountPct: 10, launchDiscountEnds: "", taxRegionalPct: 20,
+      price: 9.99, launchDiscountPct: 10, launchDiscountDays: 7, taxRegionalPct: 20,
       refundFallbackPct: 10, withholdingPct: 30, usSharePct: 35, wishlists: 0, tailPct: 1.5,
       // Blank hours means work them out from Steam's clock; the old lastDayHours key is dropped on load.
       lastDayPartial: false, lastDayHoursManual: "",
@@ -89,9 +89,7 @@
     panel: ["totals", "log", "discounts", "money", "audience", "data"],
   };
 
-  // Each field takes the type of its default: flags stay flags, the named dates must be
-  // ISO dates, and everything else is a number or blank.
-  const DATE_FIELDS = new Set(["launchDiscountEnds"]);
+  // Each field takes the type of its default: flags stay flags, everything else is a number or blank.
   function cleanFields(defaults, loaded) {
     const out = { ...defaults };
     if (!isObj(loaded)) return out;
@@ -99,7 +97,6 @@
       if (!(k in loaded)) continue;
       const v = loaded[k];
       if (typeof d === "boolean") out[k] = typeof v === "boolean" ? v : d;
-      else if (DATE_FIELDS.has(k)) out[k] = cleanDate(v);
       else out[k] = cleanNum(v);
     }
     return out;
@@ -128,6 +125,9 @@
       merged.chartPrefs.series = cleanFields(DEFAULT_STATE.chartPrefs.series, loaded.chartPrefs.series);
     }
     merged.days.sort((a, b) => a.date.localeCompare(b.date));
+    // Older saves kept an end date instead of a length; count it from the first logged day.
+    const oldEnd = isObj(loaded.settings) && !("launchDiscountDays" in loaded.settings) && cleanDate(loaded.settings.launchDiscountEnds);
+    if (oldEnd && merged.days.length) merged.settings.launchDiscountDays = Math.max(1, daysBetween(merged.days[0].date, oldEnd) + 1);
     return merged;
   }
 
@@ -255,7 +255,9 @@
   function saleOn(date) {
     return state.plannedSales.find((s) => s.start && date >= s.start && date <= addDaysISO(s.start, Math.max(1, Math.round(num(s.days, 1))) - 1));
   }
-  const launchDiscountEnd = (launch) => state.settings.launchDiscountEnds || addDaysISO(launch, 6);
+  // Days from launch the launch discount covers; blank means Steam's usual week.
+  const launchDiscountDays = () => Math.max(1, Math.round(num(state.settings.launchDiscountDays, 7)));
+  const launchDiscountEnd = (launch) => addDaysISO(launch, launchDiscountDays() - 1);
   function priceOn(date, launch) {
     const base = num(state.settings.price);
     const sale = saleOn(date);

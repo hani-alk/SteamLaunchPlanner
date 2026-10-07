@@ -12,7 +12,7 @@
 <meta name="theme-color" content="#111111" media="(prefers-color-scheme: dark)" />
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%23111111'/%3E%3Crect x='6' y='18' width='5' height='8' fill='%23EADDCA'/%3E%3Crect x='13.5' y='13' width='5' height='13' fill='%23EADDCA'/%3E%3Crect x='21' y='6' width='5' height='20' fill='%23C7352A'/%3E%3C/svg%3E" />
 <link rel="preload" href="assets/archivo.woff2" as="font" type="font/woff2" crossorigin />
-<link rel="stylesheet" href="assets/style.css?v=3.17" />
+<link rel="stylesheet" href="assets/style.css?v=3.18" />
 
 <meta property="og:type" content="website" />
 <meta property="og:title" content="Steam Launch Planner" />
@@ -465,7 +465,7 @@
           <div class="fields">
             <div class="f"><label for="f-price">Base price (USD)</label><input id="f-price" type="number" min="0" step="0.01" data-bind="settings.price" /></div>
             <div class="f"><label for="f-ld">Launch discount (%)</label><input id="f-ld" type="number" min="0" max="90" step="1" data-bind="settings.launchDiscountPct" /></div>
-            <div class="f"><label for="f-lde">Launch discount ends</label><input id="f-lde" type="date" data-bind="settings.launchDiscountEnds" /><span class="hint">Blank means 7 days after launch</span></div>
+            <div class="f"><label for="f-ldd">Launch discount length (days)</label><input id="f-ldd" type="number" min="1" max="30" step="1" data-bind="settings.launchDiscountDays" /><span class="hint">Counted from your first logged day; Steam's is usually 7</span></div>
             <div class="f"><label for="f-tax">VAT and regional pricing (%)</label><input id="f-tax" type="number" min="0" max="80" step="1" data-bind="settings.taxRegionalPct" /><span class="hint">Share of list price lost to both</span></div>
             <div class="f"><label for="f-ref">Refund rate (%)</label><input id="f-ref" type="number" min="0" max="100" step="0.1" data-bind="settings.refundFallbackPct" /><span class="hint" id="refHint">Used until you log refunds</span></div>
             <div class="f"><label for="f-wh">US withholding (%)</label><input id="f-wh" type="number" min="0" max="50" step="1" data-bind="settings.withholdingPct" /><span class="hint">From your Steamworks tax interview</span></div>
@@ -709,16 +709,16 @@
 
   <footer class="colophon">
     <!-- bump this on every change that alters the numbers or the inputs, and the ?v= on the asset links in the head and at the end so browsers fetch the new files -->
-    <span>Steam Launch Planner <span class="ver" id="ver">v3.17</span> · Oct 2026</span>
+    <span>Steam Launch Planner <span class="ver" id="ver">v3.18</span> · Oct 2026</span>
   </footer>
 
 </div>
 
-<script src="assets/chart.umd.min.js?v=3.17"></script>
-<script src="assets/common.js?v=3.17"></script>
-<script src="assets/estimate.js?v=3.17"></script>
-<script src="assets/track.js?v=3.17"></script>
-<script src="assets/pay.js?v=3.17"></script>
-<script src="assets/boot.js?v=3.17"></script>
+<script src="assets/chart.umd.min.js?v=3.18"></script>
+<script src="assets/common.js?v=3.18"></script>
+<script src="assets/estimate.js?v=3.18"></script>
+<script src="assets/track.js?v=3.18"></script>
+<script src="assets/pay.js?v=3.18"></script>
+<script src="assets/boot.js?v=3.18"></script>
 </body>
 </html>
